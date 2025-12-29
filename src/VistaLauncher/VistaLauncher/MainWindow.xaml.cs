@@ -23,7 +23,7 @@ public sealed partial class MainWindow : Window
     
     // 固定尺寸
     private const int WindowWidth = 680;
-    private const int CollapsedHeight = 70;  // 窗口高度要大于搜索框高度(52)+padding
+    private const int CollapsedHeight = 90;
     private const int ItemHeight = 52;
     private const int MaxVisibleItems = 9;
     
