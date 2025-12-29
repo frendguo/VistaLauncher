@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "VistaLauncher (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "VistaLauncher (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}
