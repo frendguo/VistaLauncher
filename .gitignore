@@ -1,2 +1,81 @@
-.vs
-bin
+# VistaLauncher .gitignore
+
+# Build results
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.rsuser
+
+# Visual Studio Cache
+*.VisualState.xml
+TestResult.xml
+
+# MSBuild
+*.log
+msbuild.wrn
+msbuild.err
+
+# NuGet
+*.nupkg
+**/packages/*
+!**/packages/build/
+*.nuget.props
+*.nuget.targets
+project.lock.json
+
+# Windows App SDK / MSIX
+*.appx
+*.appxbundle
+*.msix
+*.msixbundle
+*.appxupload
+AppPackages/
+BundleArtifacts/
+
+# Publish
+publish/
+
+# Generated files
+Generated Files/
+**/Generated Files/
+
+# User-specific files
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# JetBrains Rider
+.idea/
+*.sln.iml
+
+# VS Code
+.vscode/
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*~
+
+# Build output
+build_output.txt
