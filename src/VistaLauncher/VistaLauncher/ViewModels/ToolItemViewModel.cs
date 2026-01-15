@@ -42,6 +42,26 @@ public partial class ToolItemViewModel : ObservableObject
     public string Description => _toolItem.ShortDescription;
 
     /// <summary>
+    /// 副标题 (用于列表项显示)
+    /// </summary>
+    public string Subtitle => _toolItem.ShortDescription;
+
+    /// <summary>
+    /// 是否显示副标题
+    /// </summary>
+    public bool ShowSubtitle => !string.IsNullOrWhiteSpace(_toolItem.ShortDescription);
+
+    /// <summary>
+    /// 标签列表
+    /// </summary>
+    public List<string> Tags => _toolItem.Tags ?? [];
+
+    /// <summary>
+    /// 是否有标签
+    /// </summary>
+    public bool HasTags => Tags.Count > 0;
+
+    /// <summary>
     /// 快捷键显示 (Ctrl+1 ~ Ctrl+9)
     /// </summary>
     public string ShortcutKeyDisplay => Index < 9 ? $"Ctrl+{Index + 1}" : string.Empty;

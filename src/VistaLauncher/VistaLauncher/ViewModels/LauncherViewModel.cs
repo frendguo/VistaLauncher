@@ -61,8 +61,40 @@ public partial class LauncherViewModel : ObservableObject
     /// <summary>
     /// 列表可见性 (用于 XAML 绑定)
     /// </summary>
-    public Microsoft.UI.Xaml.Visibility ListVisibility => 
+    public Microsoft.UI.Xaml.Visibility ListVisibility =>
         IsExpanded ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
+
+    /// <summary>
+    /// 命令栏可见性
+    /// </summary>
+    public Microsoft.UI.Xaml.Visibility CommandBarVisibility =>
+        IsExpanded ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
+
+    /// <summary>
+    /// 主命令名称
+    /// </summary>
+    public string PrimaryCommandName => "Open";
+
+    /// <summary>
+    /// 次命令名称
+    /// </summary>
+    public string SecondaryCommandName => "Run as Admin";
+
+    /// <summary>
+    /// 是否有选中的工具
+    /// </summary>
+    public bool HasSelectedTool => SelectedTool != null;
+
+    /// <summary>
+    /// 选中工具的标题
+    /// </summary>
+    public string SelectedToolTitle => SelectedTool?.Name ?? string.Empty;
+
+    /// <summary>
+    /// 状态文本
+    /// </summary>
+    [ObservableProperty]
+    private string _statusText = string.Empty;
 
     /// <summary>
     /// 当 IsExpanded 变化时通知 ListVisibility 也变化
@@ -70,6 +102,16 @@ public partial class LauncherViewModel : ObservableObject
     partial void OnIsExpandedChanged(bool value)
     {
         OnPropertyChanged(nameof(ListVisibility));
+        OnPropertyChanged(nameof(CommandBarVisibility));
+    }
+
+    /// <summary>
+    /// 当选中工具变化时通知相关属性
+    /// </summary>
+    partial void OnSelectedToolChanged(ToolItemViewModel? value)
+    {
+        OnPropertyChanged(nameof(HasSelectedTool));
+        OnPropertyChanged(nameof(SelectedToolTitle));
     }
 
     /// <summary>
@@ -181,22 +223,46 @@ public partial class LauncherViewModel : ObservableObject
     /// 启动选中的工具
     /// </summary>
     [RelayCommand]
-    private async Task LaunchSelectedAsync()
+    public async Task LaunchSelectedAsync()
     {
         if (SelectedTool != null)
         {
-            await LaunchToolAsync(SelectedTool.ToolItem);
+            await LaunchToolAsync(SelectedTool.ToolItem, runAsAdmin: false);
         }
         else if (FilteredTools.Count > 0)
         {
-            await LaunchToolAsync(FilteredTools[0].ToolItem);
+            await LaunchToolAsync(FilteredTools[0].ToolItem, runAsAdmin: false);
+        }
+    }
+
+    /// <summary>
+    /// 启动选中的工具 (同步版本，用于命令绑定)
+    /// </summary>
+    public void LaunchSelected()
+    {
+        _ = LaunchSelectedAsync();
+    }
+
+    /// <summary>
+    /// 以管理员身份启动选中的工具
+    /// </summary>
+    [RelayCommand]
+    public async Task LaunchSelectedAsAdminAsync()
+    {
+        if (SelectedTool != null)
+        {
+            await LaunchToolAsync(SelectedTool.ToolItem, runAsAdmin: true);
+        }
+        else if (FilteredTools.Count > 0)
+        {
+            await LaunchToolAsync(FilteredTools[0].ToolItem, runAsAdmin: true);
         }
     }
 
     /// <summary>
     /// 启动指定工具
     /// </summary>
-    private async Task LaunchToolAsync(ToolItem tool)
+    public async Task LaunchToolAsync(ToolItem tool, bool runAsAdmin = false)
     {
         await _processLauncher.LaunchAsync(tool);
         
@@ -209,7 +275,7 @@ public partial class LauncherViewModel : ObservableObject
     /// 通过索引启动工具 (Ctrl+1 ~ Ctrl+9)
     /// </summary>
     [RelayCommand]
-    private async Task LaunchByIndexAsync(int index)
+    public async Task LaunchByIndexAsync(int index)
     {
         if (index >= 0 && index < FilteredTools.Count)
         {
