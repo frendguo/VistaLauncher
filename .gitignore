@@ -79,3 +79,7 @@ Desktop.ini
 
 # Build output
 build_output.txt
+
+# Claude Code temporary files
+tmpclaude-*
+nul
