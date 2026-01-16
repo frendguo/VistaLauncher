@@ -1,11 +1,14 @@
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using VistaLauncher.Controls;
 using VistaLauncher.Services;
 using VistaLauncher.ViewModels;
+using Windows.ApplicationModel.DataTransfer;
 using Windows.Graphics;
 using Windows.System;
 using WinRT.Interop;
@@ -22,6 +25,12 @@ public sealed partial class MainWindow : WindowEx
     private HotkeyService? _hotkeyService;
     private IntPtr _hWnd;
     private bool _isVisible;
+    private bool _suppressHideOnDeactivate;
+
+    // 服务
+    private readonly IToolDataService _toolDataService;
+    private readonly IToolManagementService _toolManagementService;
+    private readonly IImportService _importService;
 
     // Win32 API 常量
     private const int GWL_STYLE = -16;
@@ -90,12 +99,17 @@ public sealed partial class MainWindow : WindowEx
     {
         InitializeComponent();
 
-        // 创建服务和 ViewModel
-        var toolDataService = new ToolDataService();
+        // 创建服务
+        _toolDataService = new ToolDataService();
         var searchProvider = new TextMatchSearchProvider();
         var processLauncher = new Services.ProcessLauncher();
 
-        ViewModel = new LauncherViewModel(toolDataService, searchProvider, processLauncher);
+        // 创建管理服务
+        _toolManagementService = new ToolManagementService(_toolDataService);
+        _importService = new ImportService();
+
+        // 创建 ViewModel
+        ViewModel = new LauncherViewModel(_toolDataService, searchProvider, processLauncher);
 
         // 设置窗口属性
         SetupWindow();
@@ -130,12 +144,15 @@ public sealed partial class MainWindow : WindowEx
             // TODO: 打开设置窗口
         };
 
-        // 连接 SearchBar 事件
-        SearchBox.TextChanged += (s, text) =>
-        {
-            // 搜索逻辑已通过绑定处理
-        };
+        // 连接 CommandBar 更多菜单事件
+        CommandBar.OpenFileLocationClick += CommandBar_OpenFileLocationClick;
+        CommandBar.CopyPathClick += CommandBar_CopyPathClick;
+        CommandBar.EditToolClick += CommandBar_EditToolClick;
+        CommandBar.RemoveToolClick += CommandBar_RemoveToolClick;
+        CommandBar.AddToolClick += CommandBar_AddToolClick;
+        CommandBar.ImportNirLauncherClick += CommandBar_ImportNirLauncherClick;
 
+        // 连接 SearchBar 键盘事件
         SearchBox.TextBoxKeyDown += SearchBox_KeyDown;
     }
 
@@ -362,6 +379,14 @@ public sealed partial class MainWindow : WindowEx
     }
 
     /// <summary>
+    /// 设置是否抑制失去焦点时自动隐藏（用于打开对话框或文件选择器时）
+    /// </summary>
+    public void SuppressAutoHide(bool suppress)
+    {
+        _suppressHideOnDeactivate = suppress;
+    }
+
+    /// <summary>
     /// Cloak 窗口 (使窗口不可见但仍存在)
     /// </summary>
     private void Cloak()
@@ -409,8 +434,8 @@ public sealed partial class MainWindow : WindowEx
     {
         if (args.WindowActivationState == WindowActivationState.Deactivated)
         {
-            // 窗口失去焦点时隐藏
-            if (_isVisible)
+            // 窗口失去焦点时隐藏（除非被抑制，如打开文件选择器时）
+            if (_isVisible && !_suppressHideOnDeactivate)
             {
                 HideWindow();
             }
@@ -429,6 +454,162 @@ public sealed partial class MainWindow : WindowEx
     {
         _hotkeyService?.Dispose();
     }
+
+    #region CommandBar 事件处理
+
+    private void CommandBar_OpenFileLocationClick(object sender, RoutedEventArgs e)
+    {
+        var selectedTool = ViewModel.SelectedTool;
+        if (selectedTool?.ToolItem.ExecutablePath == null) return;
+
+        var path = selectedTool.ToolItem.ExecutablePath;
+        if (File.Exists(path))
+        {
+            // 打开文件所在目录并选中文件
+            Process.Start("explorer.exe", $"/select,\"{path}\"");
+        }
+        else
+        {
+            var directory = Path.GetDirectoryName(path);
+            if (directory != null && Directory.Exists(directory))
+            {
+                Process.Start("explorer.exe", directory);
+            }
+        }
+    }
+
+    private void CommandBar_CopyPathClick(object sender, RoutedEventArgs e)
+    {
+        var selectedTool = ViewModel.SelectedTool;
+        if (selectedTool?.ToolItem.ExecutablePath == null) return;
+
+        var dataPackage = new DataPackage();
+        dataPackage.SetText(selectedTool.ToolItem.ExecutablePath);
+        Clipboard.SetContent(dataPackage);
+    }
+
+    private async void CommandBar_EditToolClick(object sender, RoutedEventArgs e)
+    {
+        var selectedTool = ViewModel.SelectedTool;
+        if (selectedTool == null) return;
+
+        var dialog = new AddToolDialog(_toolManagementService)
+        {
+            EditingTool = selectedTool.ToolItem,
+            XamlRoot = Content.XamlRoot
+        };
+
+        var result = await dialog.ShowAsync();
+        if (result == ContentDialogResult.Primary && dialog.SavedTool != null)
+        {
+            // 刷新列表
+            await ViewModel.RefreshAsync();
+        }
+    }
+
+    private async void CommandBar_RemoveToolClick(object sender, RoutedEventArgs e)
+    {
+        var selectedTool = ViewModel.SelectedTool;
+        if (selectedTool == null) return;
+
+        // 确认删除
+        var confirmDialog = new ContentDialog
+        {
+            Title = "确认删除",
+            Content = $"确定要删除工具 \"{selectedTool.Name}\" 吗？",
+            PrimaryButtonText = "删除",
+            CloseButtonText = "取消",
+            DefaultButton = ContentDialogButton.Close,
+            XamlRoot = Content.XamlRoot
+        };
+
+        var result = await confirmDialog.ShowAsync();
+        if (result == ContentDialogResult.Primary)
+        {
+            await _toolManagementService.DeleteToolAsync(selectedTool.ToolItem.Id);
+            await ViewModel.RefreshAsync();
+        }
+    }
+
+    private async void CommandBar_AddToolClick(object sender, RoutedEventArgs e)
+    {
+        var dialog = new AddToolDialog(_toolManagementService)
+        {
+            XamlRoot = Content.XamlRoot
+        };
+
+        var result = await dialog.ShowAsync();
+        if (result == ContentDialogResult.Primary && dialog.SavedTool != null)
+        {
+            // 刷新列表
+            await ViewModel.RefreshAsync();
+        }
+    }
+
+    private async void CommandBar_ImportNirLauncherClick(object sender, RoutedEventArgs e)
+    {
+        // 打开对话框前禁用自动隐藏
+        SuppressAutoHide(true);
+
+        try
+        {
+            var dialog = new ImportDialog(_importService)
+            {
+                XamlRoot = Content.XamlRoot
+            };
+
+            var result = await dialog.ShowAsync();
+            if (result == ContentDialogResult.Primary)
+            {
+                var path = dialog.SelectedPath;
+                if (string.IsNullOrWhiteSpace(path))
+                {
+                    await ShowMessageAsync("提示", "请选择 NirLauncher 目录");
+                    return;
+                }
+
+                // 验证目录
+                if (!_importService.ValidateNirLauncherDirectory(path))
+                {
+                    await ShowMessageAsync("错误", "无效的 NirLauncher 目录，请确保目录中包含 NirLauncher.cfg 文件");
+                    return;
+                }
+
+                // 执行导入
+                var importResult = await _importService.ImportFromNirLauncherAsync(path, CancellationToken.None);
+
+                // 刷新列表
+                await ViewModel.RefreshAsync();
+
+                // 显示导入结果
+                var message = $"导入完成\n成功: {importResult.ImportedTools} 个工具\n跳过: {importResult.SkippedTools} 个工具";
+                if (importResult.Errors.Count > 0)
+                {
+                    message += $"\n错误: {importResult.Errors.Count} 个";
+                }
+                await ShowMessageAsync("导入结果", message);
+            }
+        }
+        finally
+        {
+            // 恢复自动隐藏
+            SuppressAutoHide(false);
+        }
+    }
+
+    private async Task ShowMessageAsync(string title, string message)
+    {
+        var dialog = new ContentDialog
+        {
+            Title = title,
+            Content = message,
+            CloseButtonText = "确定",
+            XamlRoot = Content.XamlRoot
+        };
+        await dialog.ShowAsync();
+    }
+
+    #endregion
 }
 
 /// <summary>

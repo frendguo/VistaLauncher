@@ -127,7 +127,6 @@
             <Button x:Name="MoreButton"
                     Padding="6,4,4,4"
                     AutomationProperties.AutomationId="MoreContextMenuButton"
-                    Click="MoreButton_Click"
                     Style="{StaticResource SubtleButtonStyle}"
                     ToolTipService.ToolTip="Ctrl+K">
                 <StackPanel Orientation="Horizontal">
@@ -147,11 +146,22 @@
                 </StackPanel>
                 <Button.Flyout>
                     <MenuFlyout Placement="TopEdgeAlignedRight">
-                        <MenuFlyoutItem Icon="OpenLocal" Text="Open file location" />
-                        <MenuFlyoutItem Icon="Copy" Text="Copy path" />
+                        <MenuFlyoutItem x:Name="OpenFileLocationMenuItem" Icon="OpenLocal" Text="Open file location" Click="OpenFileLocation_Click" />
+                        <MenuFlyoutItem x:Name="CopyPathMenuItem" Icon="Copy" Text="Copy path" Click="CopyPath_Click" />
                         <MenuFlyoutSeparator />
-                        <MenuFlyoutItem Icon="Edit" Text="Edit" />
-                        <MenuFlyoutItem Icon="Delete" Text="Remove" />
+                        <MenuFlyoutItem x:Name="EditMenuItem" Icon="Edit" Text="Edit" Click="EditTool_Click" />
+                        <MenuFlyoutItem x:Name="RemoveMenuItem" Icon="Delete" Text="Remove" Click="RemoveTool_Click" />
+                        <MenuFlyoutSeparator />
+                        <MenuFlyoutItem x:Name="AddToolMenuItem" Text="Add Tool" Click="AddTool_Click">
+                            <MenuFlyoutItem.Icon>
+                                <FontIcon Glyph="&#xE710;"/>
+                            </MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                        <MenuFlyoutItem x:Name="ImportNirLauncherMenuItem" Text="Import NirLauncher" Click="ImportNirLauncher_Click">
+                            <MenuFlyoutItem.Icon>
+                                <FontIcon Glyph="&#xE8B5;"/>
+                            </MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
                     </MenuFlyout>
                 </Button.Flyout>
             </Button>

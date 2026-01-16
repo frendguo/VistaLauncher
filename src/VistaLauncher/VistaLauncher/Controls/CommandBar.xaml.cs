@@ -51,6 +51,36 @@ public sealed partial class CommandBar : UserControl
     /// </summary>
     public event RoutedEventHandler? SettingsClick;
 
+    /// <summary>
+    /// 打开文件位置事件
+    /// </summary>
+    public event RoutedEventHandler? OpenFileLocationClick;
+
+    /// <summary>
+    /// 复制路径事件
+    /// </summary>
+    public event RoutedEventHandler? CopyPathClick;
+
+    /// <summary>
+    /// 编辑工具事件
+    /// </summary>
+    public event RoutedEventHandler? EditToolClick;
+
+    /// <summary>
+    /// 删除工具事件
+    /// </summary>
+    public event RoutedEventHandler? RemoveToolClick;
+
+    /// <summary>
+    /// 添加工具事件
+    /// </summary>
+    public event RoutedEventHandler? AddToolClick;
+
+    /// <summary>
+    /// 导入 NirLauncher 事件
+    /// </summary>
+    public event RoutedEventHandler? ImportNirLauncherClick;
+
     private void PrimaryButton_Click(object sender, RoutedEventArgs e)
     {
         PrimaryCommand?.Invoke(this, e);
@@ -66,8 +96,33 @@ public sealed partial class CommandBar : UserControl
         SettingsClick?.Invoke(this, e);
     }
 
-    private void MoreButton_Click(object sender, RoutedEventArgs e)
+    private void OpenFileLocation_Click(object sender, RoutedEventArgs e)
     {
-        // Flyout 自动处理
+        OpenFileLocationClick?.Invoke(this, e);
+    }
+
+    private void CopyPath_Click(object sender, RoutedEventArgs e)
+    {
+        CopyPathClick?.Invoke(this, e);
+    }
+
+    private void EditTool_Click(object sender, RoutedEventArgs e)
+    {
+        EditToolClick?.Invoke(this, e);
+    }
+
+    private void RemoveTool_Click(object sender, RoutedEventArgs e)
+    {
+        RemoveToolClick?.Invoke(this, e);
+    }
+
+    private void AddTool_Click(object sender, RoutedEventArgs e)
+    {
+        AddToolClick?.Invoke(this, e);
+    }
+
+    private void ImportNirLauncher_Click(object sender, RoutedEventArgs e)
+    {
+        ImportNirLauncherClick?.Invoke(this, e);
     }
 }

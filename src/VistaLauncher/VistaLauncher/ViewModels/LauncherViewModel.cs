@@ -313,7 +313,7 @@ public partial class LauncherViewModel : ObservableObject
     /// 刷新工具列表
     /// </summary>
     [RelayCommand]
-    private async Task RefreshAsync()
+    public async Task RefreshAsync()
     {
         await _toolDataService.ReloadAsync();
         await InitializeAsync();
