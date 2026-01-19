@@ -106,7 +106,7 @@ public sealed partial class MainWindow : WindowEx
 
         // 创建管理服务
         _toolManagementService = new ToolManagementService(_toolDataService);
-        _importService = new ImportService();
+        _importService = new ImportService(_toolDataService);
 
         // 创建 ViewModel
         ViewModel = new LauncherViewModel(_toolDataService, searchProvider, processLauncher);
