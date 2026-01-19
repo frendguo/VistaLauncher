@@ -62,9 +62,6 @@ public class ImportService : IImportService
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
             var existingGroups = (await _toolDataService.GetGroupsAsync()).ToList();
-            var existingGroupNames = existingGroups
-                .Select(g => g.Name)
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
             // 4. 导入分组（建立索引映射）
             var groupMap = new Dictionary<int, string>(); // oldIndex → newGuid
@@ -152,7 +149,7 @@ public class ImportService : IImportService
                 var toolType = DetermineToolType(groupName);
 
                 // 判断架构
-                var architecture = DetermineArchitecture(exe64, executablePath);
+                var architecture = DetermineArchitecture(exe64);
 
                 // 创建工具项
                 var tool = new ToolItem
@@ -297,21 +294,9 @@ public class ImportService : IImportService
     /// <summary>
     /// 判断架构
     /// </summary>
-    private static Architecture DetermineArchitecture(string? exe64, string resolvedPath)
+    private static Architecture DetermineArchitecture(string? exe64)
     {
-        // 如果有 exe64 且实际使用的是 64 位版本
-        if (!string.IsNullOrEmpty(exe64) && resolvedPath.Contains("x64", StringComparison.OrdinalIgnoreCase))
-        {
-            return Architecture.x64;
-        }
-
-        // 如果没有 exe64，假设是 32 位
-        if (string.IsNullOrEmpty(exe64))
-        {
-            return Architecture.x86;
-        }
-
-        return Architecture.x64;
+        return string.IsNullOrEmpty(exe64) ? Architecture.x86 : Architecture.x64;
     }
 
     /// <summary>

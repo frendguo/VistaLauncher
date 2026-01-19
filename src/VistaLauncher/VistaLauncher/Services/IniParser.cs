@@ -41,10 +41,7 @@ internal class IniParser
             if (trimmedLine.StartsWith('[') && trimmedLine.EndsWith(']'))
             {
                 currentSection = trimmedLine[1..^1].Trim();
-                if (!parser._sections.ContainsKey(currentSection))
-                {
-                    parser._sections[currentSection] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                }
+                parser._sections.TryAdd(currentSection, new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase));
                 continue;
             }
 
@@ -69,14 +66,10 @@ internal class IniParser
     /// </summary>
     public string? GetValue(string section, string key)
     {
-        if (_sections.TryGetValue(section, out var sectionData))
-        {
-            if (sectionData.TryGetValue(key, out var value))
-            {
-                return value;
-            }
-        }
-        return null;
+        return _sections.TryGetValue(section, out var sectionData)
+            && sectionData.TryGetValue(key, out var value)
+            ? value
+            : null;
     }
 
     /// <summary>
