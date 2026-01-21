@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.WinUI.Collections;
 using VistaLauncher.Models;
 using VistaLauncher.Services;
 
@@ -17,6 +18,27 @@ public partial class LauncherViewModel : ObservableObject
 
     private List<ToolItem> _allTools = [];
     private CancellationTokenSource? _searchCts;
+
+    /// <summary>
+    /// 所有工具的 ViewModel 集合（底层数据源）
+    /// </summary>
+    private readonly ObservableCollection<ToolItemViewModel> _allToolViewModels = [];
+
+    /// <summary>
+    /// ViewModel 缓存，避免每次搜索都重建 ViewModel
+    /// Key: ToolItem.Id
+    /// </summary>
+    private readonly Dictionary<string, ToolItemViewModel> _vmCache = [];
+
+    /// <summary>
+    /// 当前搜索查询的小写形式（缓存）
+    /// </summary>
+    private string _currentLowerQuery = string.Empty;
+
+    /// <summary>
+    /// 当前搜索查询的分词结果（缓存）
+    /// </summary>
+    private string[] _currentQueryTokens = [];
 
     public LauncherViewModel(
         IToolDataService toolDataService,
@@ -41,10 +63,15 @@ public partial class LauncherViewModel : ObservableObject
     private bool _isExpanded = false;
 
     /// <summary>
-    /// 过滤后的工具列表 (使用 ViewModel 包装)
+    /// 过滤后的工具列表视图（使用 AdvancedCollectionView 实现过滤和排序）
     /// </summary>
-    [ObservableProperty]
-    private ObservableCollection<ToolItemViewModel> _filteredTools = [];
+    private AdvancedCollectionView? _filteredTools;
+    public AdvancedCollectionView FilteredTools => _filteredTools ??= new AdvancedCollectionView(_allToolViewModels);
+
+    /// <summary>
+    /// 过滤后的工具数量
+    /// </summary>
+    public int FilteredToolsCount => FilteredTools.Count;
 
     /// <summary>
     /// 选中的工具
@@ -123,7 +150,26 @@ public partial class LauncherViewModel : ObservableObject
         try
         {
             _allTools = (await _toolDataService.GetToolsAsync()).ToList();
-            UpdateFilteredTools(_allTools);
+
+            // 清空并重建所有 ViewModel
+            _allToolViewModels.Clear();
+            _vmCache.Clear();
+
+            foreach (var tool in _allTools)
+            {
+                var vm = new ToolItemViewModel(tool);
+                _vmCache[tool.Id] = vm;
+                _allToolViewModels.Add(vm);
+            }
+
+            // 设置排序（按 SearchScore 降序）
+            FilteredTools.SortDescriptions.Clear();
+            FilteredTools.SortDescriptions.Add(new SortDescription(nameof(ToolItemViewModel.SearchScore), SortDirection.Descending));
+
+            // 初始化时显示所有工具，设置默认分数
+            _currentLowerQuery = string.Empty;
+            _currentQueryTokens = [];
+            UpdateScoresAndRefresh();
         }
         finally
         {
@@ -132,21 +178,126 @@ public partial class LauncherViewModel : ObservableObject
     }
 
     /// <summary>
-    /// 更新过滤后的工具列表
+    /// 更新所有 ViewModel 的搜索分数并刷新视图
     /// </summary>
-    private void UpdateFilteredTools(IEnumerable<ToolItem> tools)
+    private void UpdateScoresAndRefresh()
     {
-        var viewModels = tools
-            .Select((tool, index) => new ToolItemViewModel(tool, index))
-            .ToList();
-        
-        FilteredTools = new ObservableCollection<ToolItemViewModel>(viewModels);
-        
+        var isEmptyQuery = string.IsNullOrWhiteSpace(_currentLowerQuery);
+
+        // 更新每个 ViewModel 的分数
+        foreach (var vm in _allToolViewModels)
+        {
+            if (isEmptyQuery)
+            {
+                // 空查询时所有工具分数相同，按原始顺序
+                vm.UpdateSearchScore(1);
+            }
+            else
+            {
+                var score = CalculateScore(vm.ToolItem, _currentLowerQuery, _currentQueryTokens);
+                vm.UpdateSearchScore(score);
+            }
+        }
+
+        // 设置过滤器（分数 > 0 的才显示）
+        if (isEmptyQuery)
+        {
+            FilteredTools.Filter = null; // 空查询显示所有
+        }
+        else
+        {
+            FilteredTools.Filter = item => item is ToolItemViewModel vm && vm.SearchScore > 0;
+        }
+
+        // 刷新排序和过滤
+        FilteredTools.RefreshFilter();
+        FilteredTools.RefreshSorting();
+
+        // 更新索引（基于过滤和排序后的顺序）
+        UpdateIndices();
+
+        // 通知 UI 更新
+        OnPropertyChanged(nameof(FilteredToolsCount));
+
         // 默认选中第一个
         if (FilteredTools.Count > 0)
         {
-            SelectedTool = FilteredTools[0];
+            SelectedTool = FilteredTools[0] as ToolItemViewModel;
         }
+        else
+        {
+            SelectedTool = null;
+        }
+    }
+
+    /// <summary>
+    /// 更新过滤后视图中每个项目的索引
+    /// </summary>
+    private void UpdateIndices()
+    {
+        int index = 0;
+        foreach (var item in FilteredTools)
+        {
+            if (item is ToolItemViewModel vm)
+            {
+                vm.UpdateIndex(index);
+                vm.ResetSelection();
+                index++;
+            }
+        }
+    }
+
+    /// <summary>
+    /// 计算工具的匹配分数
+    /// </summary>
+    private static int CalculateScore(ToolItem tool, string lowerQuery, string[] queryTokens)
+    {
+        // 检查是否所有 token 都匹配
+        var allTokensMatch = queryTokens.All(token =>
+        {
+            var nameMatch = tool.Name.Contains(token, StringComparison.OrdinalIgnoreCase);
+            var shortDescMatch = tool.ShortDescription.Contains(token, StringComparison.OrdinalIgnoreCase);
+            var longDescMatch = tool.LongDescription.Contains(token, StringComparison.OrdinalIgnoreCase);
+            var tagMatch = tool.Tags.Any(tag => tag.Contains(token, StringComparison.OrdinalIgnoreCase));
+            return nameMatch || shortDescMatch || longDescMatch || tagMatch;
+        });
+
+        if (!allTokensMatch)
+        {
+            return 0; // 不匹配
+        }
+
+        var score = 1; // 基础分数
+        var lowerName = tool.Name.ToLower();
+
+        // 名称完全匹配得分最高
+        if (lowerName == lowerQuery)
+        {
+            score += 100;
+        }
+        // 名称以查询开头
+        else if (lowerName.StartsWith(lowerQuery))
+        {
+            score += 50;
+        }
+        // 名称包含查询
+        else if (lowerName.Contains(lowerQuery))
+        {
+            score += 25;
+        }
+
+        // 每个匹配的 token 加分
+        foreach (var token in queryTokens)
+        {
+            if (tool.Name.Contains(token, StringComparison.OrdinalIgnoreCase))
+                score += 10;
+            if (tool.ShortDescription.Contains(token, StringComparison.OrdinalIgnoreCase))
+                score += 5;
+            if (tool.Tags.Any(t => t.Contains(token, StringComparison.OrdinalIgnoreCase)))
+                score += 3;
+        }
+
+        return score;
     }
 
     /// <summary>
@@ -172,12 +323,15 @@ public partial class LauncherViewModel : ObservableObject
             // 延迟搜索，避免频繁触发
             await Task.Delay(100, token);
 
-            var results = await _searchProvider.SearchAsync(query, _allTools, token);
-            
             if (!token.IsCancellationRequested)
             {
-                UpdateFilteredTools(results);
-                
+                // 更新缓存的查询字符串
+                _currentLowerQuery = query.ToLower();
+                _currentQueryTokens = _currentLowerQuery.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+                // 更新分数并刷新视图
+                UpdateScoresAndRefresh();
+
                 // 如果有搜索内容，自动展开列表
                 if (!string.IsNullOrWhiteSpace(query))
                 {
@@ -229,9 +383,9 @@ public partial class LauncherViewModel : ObservableObject
         {
             await LaunchToolAsync(SelectedTool.ToolItem, runAsAdmin: false);
         }
-        else if (FilteredTools.Count > 0)
+        else if (FilteredTools.Count > 0 && FilteredTools[0] is ToolItemViewModel firstTool)
         {
-            await LaunchToolAsync(FilteredTools[0].ToolItem, runAsAdmin: false);
+            await LaunchToolAsync(firstTool.ToolItem, runAsAdmin: false);
         }
     }
 
@@ -253,9 +407,9 @@ public partial class LauncherViewModel : ObservableObject
         {
             await LaunchToolAsync(SelectedTool.ToolItem, runAsAdmin: true);
         }
-        else if (FilteredTools.Count > 0)
+        else if (FilteredTools.Count > 0 && FilteredTools[0] is ToolItemViewModel firstTool)
         {
-            await LaunchToolAsync(FilteredTools[0].ToolItem, runAsAdmin: true);
+            await LaunchToolAsync(firstTool.ToolItem, runAsAdmin: true);
         }
     }
 
@@ -277,9 +431,9 @@ public partial class LauncherViewModel : ObservableObject
     [RelayCommand]
     public async Task LaunchByIndexAsync(int index)
     {
-        if (index >= 0 && index < FilteredTools.Count)
+        if (index >= 0 && index < FilteredTools.Count && FilteredTools[index] is ToolItemViewModel vm)
         {
-            await LaunchToolAsync(FilteredTools[index].ToolItem);
+            await LaunchToolAsync(vm.ToolItem);
         }
     }
 
@@ -293,7 +447,7 @@ public partial class LauncherViewModel : ObservableObject
 
         var currentIndex = SelectedTool != null ? FilteredTools.IndexOf(SelectedTool) : -1;
         var nextIndex = (currentIndex + 1) % FilteredTools.Count;
-        SelectedTool = FilteredTools[nextIndex];
+        SelectedTool = FilteredTools[nextIndex] as ToolItemViewModel;
     }
 
     /// <summary>
@@ -306,7 +460,7 @@ public partial class LauncherViewModel : ObservableObject
 
         var currentIndex = SelectedTool != null ? FilteredTools.IndexOf(SelectedTool) : 0;
         var prevIndex = currentIndex <= 0 ? FilteredTools.Count - 1 : currentIndex - 1;
-        SelectedTool = FilteredTools[prevIndex];
+        SelectedTool = FilteredTools[prevIndex] as ToolItemViewModel;
     }
 
     /// <summary>
@@ -315,6 +469,10 @@ public partial class LauncherViewModel : ObservableObject
     [RelayCommand]
     public async Task RefreshAsync()
     {
+        // 清空 ViewModel 缓存和图标缓存
+        _vmCache.Clear();
+        IconExtractor.ClearCache();
+
         await _toolDataService.ReloadAsync();
         await InitializeAsync();
     }

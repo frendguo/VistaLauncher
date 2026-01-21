@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Drawing;
 using System.Runtime.InteropServices;
 using Microsoft.UI.Xaml.Media.Imaging;
@@ -12,6 +13,17 @@ public static class IconExtractor
     private const uint SHGFI_ICON = 0x100;
     private const uint SHGFI_LARGEICON = 0x0;
     private const uint SHGFI_SMALLICON = 0x1;
+
+    /// <summary>
+    /// 图标缓存，使用 ConcurrentDictionary 确保线程安全
+    /// Key 格式: normalizedPath|lastWriteTimeTicks|useLargeIcon
+    /// </summary>
+    private static readonly ConcurrentDictionary<string, BitmapImage?> _cache = new();
+
+    /// <summary>
+    /// 最大缓存条目数
+    /// </summary>
+    private const int MaxCacheSize = 2000;
 
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
     private struct SHFILEINFO
@@ -101,10 +113,72 @@ public static class IconExtractor
     }
 
     /// <summary>
-    /// 异步提取图标
+    /// 异步提取图标（带缓存）
     /// </summary>
     public static async Task<BitmapImage?> ExtractIconAsync(string filePath, bool useLargeIcon = true)
     {
-        return await Task.Run(() => ExtractIcon(filePath, useLargeIcon));
+        // 尝试获取缓存 key，如果文件不存在会返回 null
+        var key = GetCacheKey(filePath, useLargeIcon);
+        if (key is null)
+        {
+            return null;
+        }
+
+        // 检查缓存
+        if (_cache.TryGetValue(key, out var cached))
+        {
+            return cached;
+        }
+
+        // 从文件系统提取图标
+        var icon = await Task.Run(() => ExtractIcon(filePath, useLargeIcon));
+
+        // 简单的容量控制：达到上限时清空缓存
+        if (_cache.Count >= MaxCacheSize)
+        {
+            _cache.Clear();
+        }
+
+        // 添加到缓存
+        _cache.TryAdd(key, icon);
+        return icon;
     }
+
+    /// <summary>
+    /// 生成缓存 Key
+    /// 格式: normalizedPath|lastWriteTimeTicks|useLargeIcon
+    /// </summary>
+    private static string? GetCacheKey(string filePath, bool useLargeIcon)
+    {
+        if (string.IsNullOrEmpty(filePath))
+        {
+            return null;
+        }
+
+        try
+        {
+            var normalizedPath = Path.GetFullPath(filePath).ToLowerInvariant();
+            if (!File.Exists(normalizedPath))
+            {
+                return null;
+            }
+
+            var lastWrite = File.GetLastWriteTimeUtc(normalizedPath).Ticks;
+            return $"{normalizedPath}|{lastWrite}|{useLargeIcon}";
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// 清空图标缓存
+    /// </summary>
+    public static void ClearCache() => _cache.Clear();
+
+    /// <summary>
+    /// 获取当前缓存条目数
+    /// </summary>
+    public static int CacheCount => _cache.Count;
 }

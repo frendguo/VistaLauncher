@@ -12,11 +12,11 @@ public partial class ToolItemViewModel : ObservableObject
 {
     private readonly ToolItem _toolItem;
 
-    public ToolItemViewModel(ToolItem toolItem, int index)
+    public ToolItemViewModel(ToolItem toolItem, int index = 0)
     {
         _toolItem = toolItem;
-        Index = index;
-        
+        _index = index;
+
         // 异步加载图标
         _ = LoadIconAsync();
     }
@@ -29,7 +29,30 @@ public partial class ToolItemViewModel : ObservableObject
     /// <summary>
     /// 列表索引 (0-based)
     /// </summary>
-    public int Index { get; }
+    private int _index;
+    public int Index => _index;
+
+    /// <summary>
+    /// 更新索引并通知 UI
+    /// </summary>
+    public void UpdateIndex(int newIndex)
+    {
+        if (_index != newIndex)
+        {
+            _index = newIndex;
+            OnPropertyChanged(nameof(Index));
+            OnPropertyChanged(nameof(ShortcutKeyDisplay));
+            OnPropertyChanged(nameof(ShowShortcutKey));
+        }
+    }
+
+    /// <summary>
+    /// 重置选中状态
+    /// </summary>
+    public void ResetSelection()
+    {
+        IsSelected = false;
+    }
 
     /// <summary>
     /// 工具名称
@@ -88,6 +111,24 @@ public partial class ToolItemViewModel : ObservableObject
     /// </summary>
     [ObservableProperty]
     private bool _isSelected;
+
+    /// <summary>
+    /// 搜索匹配分数（用于排序，分数越高排序越靠前）
+    /// </summary>
+    private int _searchScore;
+    public int SearchScore => _searchScore;
+
+    /// <summary>
+    /// 更新搜索分数
+    /// </summary>
+    public void UpdateSearchScore(int score)
+    {
+        if (_searchScore != score)
+        {
+            _searchScore = score;
+            OnPropertyChanged(nameof(SearchScore));
+        }
+    }
 
     /// <summary>
     /// 异步加载图标
