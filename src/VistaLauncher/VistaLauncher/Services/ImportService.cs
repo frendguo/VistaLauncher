@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using VistaLauncher.Models;
 
 namespace VistaLauncher.Services;
@@ -151,6 +152,9 @@ public class ImportService : IImportService
                 // 判断架构
                 var architecture = DetermineArchitecture(exe64);
 
+                // 提取版本号
+                var version = ExtractVersionFromExe(executablePath);
+
                 // 创建工具项
                 var tool = new ToolItem
                 {
@@ -165,6 +169,7 @@ public class ImportService : IImportService
                     GroupId = groupId,
                     Type = toolType,
                     Architecture = architecture,
+                    Version = version,
                     CreatedAt = DateTime.Now,
                     UpdatedAt = DateTime.Now
                 };
@@ -333,5 +338,29 @@ public class ImportService : IImportService
             Status = status,
             CurrentItem = currentItem
         });
+    }
+
+    /// <summary>
+    /// 从可执行文件中提取版本号
+    /// </summary>
+    private static string ExtractVersionFromExe(string exePath)
+    {
+        try
+        {
+            if (!File.Exists(exePath))
+            {
+                return string.Empty;
+            }
+
+            var versionInfo = FileVersionInfo.GetVersionInfo(exePath);
+            var version = versionInfo.FileVersion?.Trim();
+
+            return string.IsNullOrEmpty(version) ? string.Empty : version;
+        }
+        catch
+        {
+            // 如果提取失败，返回空字符串
+            return string.Empty;
+        }
     }
 }
