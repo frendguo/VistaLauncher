@@ -10,6 +10,11 @@ public partial class App : Application
     private Window? _window;
 
     /// <summary>
+    /// 主窗口实例（供其他组件访问）
+    /// </summary>
+    public static Window? MainWindow { get; private set; }
+
+    /// <summary>
     /// Initializes the singleton application object.
     /// </summary>
     public App()
@@ -23,6 +28,7 @@ public partial class App : Application
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
         _window = new MainWindow();
+        MainWindow = _window;
         _window.Activate();
     }
 }

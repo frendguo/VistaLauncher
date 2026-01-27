@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using VistaLauncher.Models;
 
 namespace VistaLauncher.Services;
@@ -8,6 +9,13 @@ namespace VistaLauncher.Services;
 /// </summary>
 public class ToolDataService : IToolDataService
 {
+    private static readonly JsonSerializerOptions _jsonOptions = new()
+    {
+        WriteIndented = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+    };
+
     private readonly string _dataDirectory;
     private readonly string _toolsFilePath;
     private ToolsData _data = new();
@@ -126,8 +134,8 @@ public class ToolDataService : IToolDataService
     public async Task SaveAsync()
     {
         _data.LastModified = DateTime.Now;
-        
-        var json = JsonSerializer.Serialize(_data, JsonContext.Default.ToolsData);
+
+        var json = JsonSerializer.Serialize(_data, _jsonOptions);
         await File.WriteAllTextAsync(_toolsFilePath, json);
     }
 
@@ -151,7 +159,7 @@ public class ToolDataService : IToolDataService
             try
             {
                 var json = await File.ReadAllTextAsync(_toolsFilePath);
-                var data = JsonSerializer.Deserialize(json, JsonContext.Default.ToolsData);
+                var data = JsonSerializer.Deserialize<ToolsData>(json, _jsonOptions);
                 if (data != null)
                 {
                     _data = data;

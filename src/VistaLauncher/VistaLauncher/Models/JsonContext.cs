@@ -16,6 +16,9 @@ namespace VistaLauncher.Models;
 [JsonSerializable(typeof(ToolGroup))]
 [JsonSerializable(typeof(List<ToolItem>))]
 [JsonSerializable(typeof(List<ToolGroup>))]
+[JsonSerializable(typeof(UpdateInfo))]
+[JsonSerializable(typeof(UpdateConfig))]
+[JsonSerializable(typeof(List<UpdateInfo>))]
 internal partial class JsonContext : JsonSerializerContext
 {
 }

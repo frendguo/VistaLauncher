@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentDialog
+    x:Class="VistaLauncher.Controls.AddToolDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="添加工具"
+    PrimaryButtonText="保存"
+    CloseButtonText="取消"
+    DefaultButton="Primary">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="500">
+        <StackPanel Spacing="16" MinWidth="450">
+            <!-- 工具名称 -->
+            <TextBox x:Name="ToolNameTextBox"
+                     Header="名称 *"
+                     PlaceholderText="输入工具名称"/>
+
+            <!-- 可执行文件路径 -->
+            <StackPanel Spacing="4">
+                <TextBlock Text="可执行文件 *"/>
+                <Grid ColumnSpacing="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox x:Name="ExecutablePathTextBox"
+                             PlaceholderText="选择或输入 exe 文件路径"/>
+                    <Button Grid.Column="1" Content="浏览..." Click="BrowseExe_Click"/>
+                </Grid>
+            </StackPanel>
+
+            <!-- 简短描述 -->
+            <TextBox x:Name="ShortDescriptionTextBox"
+                     Header="简短描述"
+                     PlaceholderText="一句话描述工具功能"/>
+
+            <!-- 详细描述 -->
+            <TextBox x:Name="LongDescriptionTextBox"
+                     Header="详细描述"
+                     PlaceholderText="详细说明工具用途"
+                     TextWrapping="Wrap"
+                     AcceptsReturn="True"
+                     MinHeight="80"/>
+
+            <!-- 分组选择 -->
+            <ComboBox x:Name="GroupComboBox"
+                      Header="分组 *"
+                      PlaceholderText="选择分组"
+                      DisplayMemberPath="Name"
+                      HorizontalAlignment="Stretch"/>
+
+            <!-- 主页 URL -->
+            <TextBox x:Name="HomepageUrlTextBox"
+                     Header="主页 URL"
+                     PlaceholderText="https://..."/>
+
+            <!-- 标签 -->
+            <TextBox x:Name="TagsTextBox"
+                     Header="标签"
+                     PlaceholderText="多个标签用逗号分隔"/>
+
+            <!-- 选项 -->
+            <StackPanel Spacing="8">
+                <CheckBox x:Name="IsConsoleCheckBox" Content="命令行工具 (无 GUI)"/>
+                <CheckBox x:Name="RequiresAdminCheckBox" Content="需要管理员权限"/>
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</ContentDialog>
