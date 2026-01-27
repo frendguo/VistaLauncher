@@ -128,6 +128,34 @@ public partial class ToolItem : ObservableObject
     private DateTime _updatedAt = DateTime.Now;
 
     /// <summary>
+    /// 更新信息（缓存的最新版本数据）
+    /// </summary>
+    [ObservableProperty]
+    [property: JsonPropertyName("updateInfo")]
+    private UpdateInfo? _updateInfo;
+
+    /// <summary>
+    /// 最后检查更新的时间
+    /// </summary>
+    [ObservableProperty]
+    [property: JsonPropertyName("lastUpdateCheck")]
+    private DateTime? _lastUpdateCheck;
+
+    /// <summary>
+    /// 更新源类型（用于确定版本检查方式）
+    /// </summary>
+    [ObservableProperty]
+    [property: JsonPropertyName("updateSource")]
+    private UpdateSource _updateSource = UpdateSource.None;
+
+    /// <summary>
+    /// 是否跳过此工具的更新检查
+    /// </summary>
+    [ObservableProperty]
+    [property: JsonPropertyName("skipUpdateCheck")]
+    private bool _skipUpdateCheck;
+
+    /// <summary>
     /// 获取用于显示的类型字符串
     /// </summary>
     [JsonIgnore]
@@ -138,4 +166,13 @@ public partial class ToolItem : ObservableObject
     /// </summary>
     [JsonIgnore]
     public string UpdatedAtDisplay => UpdatedAt.ToString("yyyy-MM-dd");
+
+    /// <summary>
+    /// 是否有可用更新
+    /// </summary>
+    [JsonIgnore]
+    public bool HasUpdate => UpdateInfo != null &&
+                             !string.IsNullOrEmpty(UpdateInfo.Version) &&
+                             !string.IsNullOrEmpty(Version) &&
+                             UpdateInfo.Version != Version;
 }

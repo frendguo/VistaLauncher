@@ -81,6 +81,11 @@ public sealed partial class CommandBar : UserControl
     /// </summary>
     public event RoutedEventHandler? ImportNirLauncherClick;
 
+    /// <summary>
+    /// 检查更新事件
+    /// </summary>
+    public event RoutedEventHandler? CheckUpdatesClick;
+
     private void PrimaryButton_Click(object sender, RoutedEventArgs e)
     {
         PrimaryCommand?.Invoke(this, e);
@@ -124,5 +129,10 @@ public sealed partial class CommandBar : UserControl
     private void ImportNirLauncher_Click(object sender, RoutedEventArgs e)
     {
         ImportNirLauncherClick?.Invoke(this, e);
+    }
+
+    private void CheckUpdates_Click(object sender, RoutedEventArgs e)
+    {
+        CheckUpdatesClick?.Invoke(this, e);
     }
 }

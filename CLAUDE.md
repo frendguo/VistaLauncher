@@ -67,7 +67,11 @@ dotnet build VistaLauncher.slnx --no-incremental
 
 ### 数据存储
 
-- **位置**: `%AppData%\Roaming\VistaLauncher\tools.json`
+- **代码中的逻辑路径**: `%AppData%\Roaming\VistaLauncher\tools.json`
+- **实际存储路径** (WinUI 3 MSIX 沙箱隔离):
+  ```
+  %LocalAppData%\Packages\91237e0e-511e-4aca-9f74-bb4bf9e966cf_mtdsxkypkab5p\LocalCache\Roaming\VistaLauncher\tools.json
+  ```
 - **格式**: JSON，使用 System.Text.Json 和 Source Generator (JsonContext)
 - **结构**: `ToolsData` 包含 `Groups` (工具分组) 和 `Tools` (工具列表)
 - **默认数据**: 首次运行时创建，包含记事本和命令提示符示例 (见 `ToolDataService.cs:176-222`)

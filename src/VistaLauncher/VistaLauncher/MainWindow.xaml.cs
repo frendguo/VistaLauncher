@@ -31,6 +31,8 @@ public sealed partial class MainWindow : WindowEx
     private readonly IToolDataService _toolDataService;
     private readonly IToolManagementService _toolManagementService;
     private readonly IImportService _importService;
+    private readonly IVersionCheckService _versionCheckService;
+    private readonly IUpdateService _updateService;
 
     // Win32 API 常量
     private const int GWL_STYLE = -16;
@@ -108,6 +110,10 @@ public sealed partial class MainWindow : WindowEx
         _toolManagementService = new ToolManagementService(_toolDataService);
         _importService = new ImportService(_toolDataService);
 
+        // 创建更新服务
+        _versionCheckService = new VersionCheckService();
+        _updateService = new UpdateService(_toolDataService);
+
         // 创建 ViewModel
         ViewModel = new LauncherViewModel(_toolDataService, searchProvider, processLauncher);
 
@@ -151,6 +157,7 @@ public sealed partial class MainWindow : WindowEx
         CommandBar.RemoveToolClick += CommandBar_RemoveToolClick;
         CommandBar.AddToolClick += CommandBar_AddToolClick;
         CommandBar.ImportNirLauncherClick += CommandBar_ImportNirLauncherClick;
+        CommandBar.CheckUpdatesClick += CommandBar_CheckUpdatesClick;
 
         // 连接 SearchBar 键盘事件
         SearchBox.TextBoxKeyDown += SearchBox_KeyDown;
@@ -607,6 +614,38 @@ public sealed partial class MainWindow : WindowEx
             XamlRoot = Content.XamlRoot
         };
         await dialog.ShowAsync();
+    }
+
+    private async void CommandBar_CheckUpdatesClick(object sender, RoutedEventArgs e)
+    {
+        // 打开对话框前禁用自动隐藏
+        SuppressAutoHide(true);
+
+        try
+        {
+            var dialog = new UpdateDialog(_versionCheckService, _updateService, _toolDataService)
+            {
+                XamlRoot = Content.XamlRoot
+            };
+
+            // 获取所有工具
+            var tools = await _toolDataService.GetToolsAsync();
+
+            // 显示对话框并开始检查
+            var showTask = dialog.ShowAsync();
+            await dialog.CheckUpdatesAsync(tools);
+
+            // 等待对话框关闭
+            await showTask;
+
+            // 刷新列表
+            await ViewModel.RefreshAsync();
+        }
+        finally
+        {
+            // 恢复自动隐藏
+            SuppressAutoHide(false);
+        }
     }
 
     #endregion

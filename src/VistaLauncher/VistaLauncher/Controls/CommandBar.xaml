@@ -162,6 +162,12 @@
                                 <FontIcon Glyph="&#xE8B5;"/>
                             </MenuFlyoutItem.Icon>
                         </MenuFlyoutItem>
+                        <MenuFlyoutSeparator />
+                        <MenuFlyoutItem x:Name="CheckUpdatesMenuItem" Text="Check for Updates" Click="CheckUpdates_Click">
+                            <MenuFlyoutItem.Icon>
+                                <FontIcon Glyph="&#xE895;"/>
+                            </MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
                     </MenuFlyout>
                 </Button.Flyout>
             </Button>
