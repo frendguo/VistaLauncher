@@ -149,6 +149,15 @@ public partial class ToolItem : ObservableObject
     private UpdateSource _updateSource = UpdateSource.None;
 
     /// <summary>
+    /// PAD (Portable Application Description) 文件 URL
+    /// 用于 NirSoft 等支持 PAD 标准的工具更新检查
+    /// 例如: https://www.nirsoft.net/pad/hashmyfiles.xml
+    /// </summary>
+    [ObservableProperty]
+    [property: JsonPropertyName("padUrl")]
+    private string? _padUrl;
+
+    /// <summary>
     /// 是否跳过此工具的更新检查
     /// </summary>
     [ObservableProperty]
