@@ -184,4 +184,10 @@ public partial class ToolItem : ObservableObject
                              !string.IsNullOrEmpty(UpdateInfo.Version) &&
                              !string.IsNullOrEmpty(Version) &&
                              UpdateInfo.Version != Version;
+
+    /// <summary>
+    /// 工具配置来源（运行时属性，不序列化）
+    /// </summary>
+    [JsonIgnore]
+    public ToolSource Source { get; set; } = ToolSource.User;
 }

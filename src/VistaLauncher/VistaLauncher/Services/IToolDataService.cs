@@ -58,7 +58,22 @@ public interface IToolDataService
     Task ReloadAsync();
 
     /// <summary>
-    /// 获取配置文件路径
+    /// 获取用户配置文件路径
     /// </summary>
     string GetToolsFilePath();
+
+    /// <summary>
+    /// 获取默认配置文件路径（软件目录）
+    /// </summary>
+    string GetDefaultConfigPath();
+
+    /// <summary>
+    /// 检查指定工具是否为默认工具
+    /// </summary>
+    bool IsDefaultTool(string toolId);
+
+    /// <summary>
+    /// 重置工具到默认配置（移除用户的覆盖）
+    /// </summary>
+    Task<bool> ResetToolToDefaultAsync(string toolId);
 }
