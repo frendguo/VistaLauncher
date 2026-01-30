@@ -67,3 +67,24 @@ public enum UpdateSource
     /// </summary>
     Package
 }
+
+/// <summary>
+/// 工具配置来源
+/// </summary>
+public enum ToolSource
+{
+    /// <summary>
+    /// 默认配置（软件目录，只读）
+    /// </summary>
+    Default,
+
+    /// <summary>
+    /// 用户配置（用户目录，可写）
+    /// </summary>
+    User,
+
+    /// <summary>
+    /// 用户覆盖（用户修改了默认工具）
+    /// </summary>
+    UserOverride
+}

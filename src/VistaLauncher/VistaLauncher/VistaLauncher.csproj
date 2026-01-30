@@ -48,6 +48,15 @@
     <Manifest Include="$(ApplicationManifest)" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\VistaLauncher.Core\VistaLauncher.Core.csproj" />
+  </ItemGroup>
+
+  <!-- 允许测试项目访问 internal 类型 -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="VistaLauncher.Tests" />
+  </ItemGroup>
+
   <!--
     Defining the "Msix" ProjectCapability here allows the Single-project MSIX Packaging
     Tools extension to be activated for this project even if the Windows App SDK Nuget
