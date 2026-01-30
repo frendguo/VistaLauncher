@@ -35,7 +35,7 @@ jobs:
       - name: Restore dependencies
         run: |
           cd src/VistaLauncher
-          dotnet restore VistaLauncher.slnx -p:Platform=${{ matrix.platform }}
+          dotnet restore VistaLauncher.slnx -p:Platform=${{ matrix.platform }} -p:PublishReadyToRun=true
 
       - name: Build
         run: |
