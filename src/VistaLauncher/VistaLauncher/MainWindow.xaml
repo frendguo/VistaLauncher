@@ -73,7 +73,8 @@
                               ItemClick="ToolsListView_ItemClick"
                               Background="Transparent"
                               Padding="8,4,8,4"
-                              ItemContainerStyle="{StaticResource LauncherListItemStyle}">
+                              ItemContainerStyle="{StaticResource LauncherListItemStyle}"
+                              ContainerContentChanging="ToolsListView_ContainerContentChanging">
 
                         <ListView.ItemTemplate>
                             <DataTemplate x:DataType="vm:ToolItemViewModel">

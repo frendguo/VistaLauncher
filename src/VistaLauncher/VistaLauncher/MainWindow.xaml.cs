@@ -4,6 +4,7 @@ using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
 using VistaLauncher.Controls;
 using VistaLauncher.Services;
@@ -455,6 +456,48 @@ public sealed partial class MainWindow : WindowEx
         {
             ViewModel.SelectedTool = tool;
         }
+    }
+
+    /// <summary>
+    /// ListView 容器内容变化事件 - 用于延迟加载图标
+    /// </summary>
+    private void ToolsListView_ContainerContentChanging(ListViewBase sender, ContainerContentChangingEventArgs args)
+    {
+        if (args.InRecycleQueue)
+        {
+            // 项目被回收，不做处理
+            return;
+        }
+
+        if (args.Item is ToolItemViewModel vm)
+        {
+            // 阶段 0: 注册回调，在项目首次可见时触发图标加载
+            if (args.Phase == 0)
+            {
+                args.RegisterUpdateCallback(ContainerContentChanging_DeferredIconLoad);
+            }
+            // 阶段 1: 触发延迟加载
+            else if (args.Phase == 1)
+            {
+                // 只在项目可见时加载图标
+                vm.RequestLoadIcon();
+            }
+        }
+    }
+
+    /// <summary>
+    /// 延迟图标加载的回调
+    /// </summary>
+    private void ContainerContentChanging_DeferredIconLoad(ListViewBase sender, ContainerContentChangingEventArgs args)
+    {
+        if (args.Item is ToolItemViewModel vm)
+        {
+            // 触发图标加载
+            vm.RequestLoadIcon();
+        }
+
+        // 标记处理完成
+        args.Handled = true;
     }
 
     private void MainWindow_Closed(object sender, WindowEventArgs args)
