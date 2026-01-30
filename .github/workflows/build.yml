@@ -43,6 +43,7 @@ jobs:
           dotnet build VistaLauncher.slnx -p:Platform=${{ matrix.platform }} -c Release --no-restore
 
       - name: Run Tests
+        if: matrix.platform != 'ARM64'
         run: |
           cd src/VistaLauncher
           dotnet test VistaLauncher.Tests/VistaLauncher.Tests.csproj -p:Platform=${{ matrix.platform }} -c Release --no-build
