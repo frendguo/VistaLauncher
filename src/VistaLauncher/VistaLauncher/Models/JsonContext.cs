@@ -19,6 +19,11 @@ namespace VistaLauncher.Models;
 [JsonSerializable(typeof(UpdateInfo))]
 [JsonSerializable(typeof(UpdateConfig))]
 [JsonSerializable(typeof(List<UpdateInfo>))]
+[JsonSerializable(typeof(StartupConfig))]
+[JsonSerializable(typeof(HotkeyConfig))]
+[JsonSerializable(typeof(UIConfig))]
+[JsonSerializable(typeof(SearchConfig))]
+[JsonSerializable(typeof(AppConfig))]
 internal partial class JsonContext : JsonSerializerContext
 {
 }
