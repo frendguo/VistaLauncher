@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using VistaLauncher.Core.Services;
 using VistaLauncher.Models;
 
 namespace VistaLauncher.Services;
@@ -153,7 +154,7 @@ public class ImportService : IImportService
                 var architecture = DetermineArchitecture(exe64);
 
                 // 提取版本号
-                var version = ExtractVersionFromExe(executablePath);
+                var version = FileVersionHelper.ExtractVersionFromExe(executablePath);
 
                 // 创建工具项
                 var tool = new ToolItem
@@ -340,27 +341,4 @@ public class ImportService : IImportService
         });
     }
 
-    /// <summary>
-    /// 从可执行文件中提取版本号
-    /// </summary>
-    private static string ExtractVersionFromExe(string exePath)
-    {
-        try
-        {
-            if (!File.Exists(exePath))
-            {
-                return string.Empty;
-            }
-
-            var versionInfo = FileVersionInfo.GetVersionInfo(exePath);
-            var version = versionInfo.FileVersion?.Trim();
-
-            return string.IsNullOrEmpty(version) ? string.Empty : version;
-        }
-        catch
-        {
-            // 如果提取失败，返回空字符串
-            return string.Empty;
-        }
-    }
 }
