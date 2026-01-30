@@ -28,14 +28,21 @@ public class ToolDataService : IToolDataService
     private readonly object _lock = new();
 
     public ToolDataService()
+        : this(
+            Path.Combine(AppContext.BaseDirectory, "tools.json"),
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "VistaLauncher"))
     {
-        // 默认配置路径（软件目录）
-        _defaultConfigPath = Path.Combine(AppContext.BaseDirectory, "tools.json");
+    }
 
-        // 用户配置路径（AppData/Roaming/VistaLauncher）
-        _userDataDirectory = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "VistaLauncher");
+    /// <summary>
+    /// 用于测试的构造函数，允许指定配置路径
+    /// </summary>
+    /// <param name="defaultConfigPath">默认配置文件路径（软件目录）</param>
+    /// <param name="userDataDirectory">用户数据目录</param>
+    internal ToolDataService(string defaultConfigPath, string userDataDirectory)
+    {
+        _defaultConfigPath = defaultConfigPath;
+        _userDataDirectory = userDataDirectory;
         _userConfigPath = Path.Combine(_userDataDirectory, "tools.json");
 
         // 确保用户目录存在

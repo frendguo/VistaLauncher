@@ -41,6 +41,20 @@ dotnet clean VistaLauncher.slnx
 dotnet build VistaLauncher.slnx --no-incremental
 ```
 
+### 运行测试
+
+```powershell
+# 在 src/VistaLauncher 目录下执行
+# 运行所有测试（需指定平台）
+dotnet test VistaLauncher.Tests/VistaLauncher.Tests.csproj -p:Platform=x64
+
+# 带详细输出
+dotnet test VistaLauncher.Tests/VistaLauncher.Tests.csproj -p:Platform=x64 --verbosity normal
+
+# 运行特定测试
+dotnet test VistaLauncher.Tests/VistaLauncher.Tests.csproj -p:Platform=x64 --filter "FullyQualifiedName~LoadAsync"
+```
+
 ## 架构概览
 
 ### 核心架构模式
@@ -64,6 +78,11 @@ dotnet build VistaLauncher.slnx --no-incremental
   - `IHotkeyService` / `HotkeyService`: 全局热键注册 (Ctrl+F2)，需先调用 `Initialize(Window)` 关联窗口
   - `IconExtractor`: 使用 System.Drawing.Common 从可执行文件提取图标
   - `ConfigService`: 应用配置管理（预留）
+
+- **项目分层**:
+  - `VistaLauncher.Core`: 核心业务逻辑和模型，无 WinUI 依赖，可独立测试
+  - `VistaLauncher`: WinUI 3 应用层，引用 Core 项目
+  - `VistaLauncher.Tests`: 单元测试项目，使用 xUnit 框架
 
 ### 数据存储
 
@@ -109,28 +128,28 @@ dotnet build VistaLauncher.slnx --no-incremental
 ## 目录结构
 
 ```
-src/VistaLauncher/VistaLauncher/
-├── App.xaml / App.xaml.cs          # 应用程序入口
-├── MainWindow.xaml / MainWindow.xaml.cs  # 主窗口 UI 和交互逻辑
-├── Models/                         # 数据模型
-│   ├── ToolItem.cs                 # 工具项
-│   ├── ToolGroup.cs                # 工具分组
-│   ├── ToolsData.cs                # 数据根对象
-│   ├── AppConfig.cs                # 应用配置
-│   ├── Enums.cs                    # 枚举定义
-│   └── JsonContext.cs              # JSON 序列化上下文
-├── Services/                       # 服务层
-│   ├── IToolDataService.cs / ToolDataService.cs
-│   ├── ISearchProvider.cs / TextMatchSearchProvider.cs
-│   ├── ProcessLauncher.cs
-│   ├── HotkeyService.cs
-│   ├── IconExtractor.cs
-│   └── ConfigService.cs
-├── ViewModels/                     # 视图模型
-│   ├── LauncherViewModel.cs        # 主启动器 ViewModel
-│   └── ToolItemViewModel.cs        # 工具项 ViewModel (包装 ToolItem)
-└── Styles/                         # 样式资源
-    └── LauncherTheme.xaml          # 启动器主题样式
+src/VistaLauncher/
+├── VistaLauncher.slnx              # 解决方案文件
+├── VistaLauncher/                  # 主项目 (WinUI 3 应用)
+│   ├── App.xaml / App.xaml.cs      # 应用程序入口
+│   ├── MainWindow.xaml / MainWindow.xaml.cs  # 主窗口 UI 和交互逻辑
+│   ├── Models/                     # 数据模型 (仅 AppConfig, JsonContext)
+│   ├── Services/                   # WinUI 相关服务
+│   ├── ViewModels/                 # 视图模型
+│   └── Styles/                     # 样式资源
+├── VistaLauncher.Core/             # 核心库 (无 WinUI 依赖)
+│   ├── Models/                     # 核心数据模型
+│   │   ├── ToolItem.cs             # 工具项
+│   │   ├── ToolGroup.cs            # 工具分组
+│   │   ├── ToolsData.cs            # 数据根对象
+│   │   ├── Enums.cs                # 枚举定义 (ToolSource 等)
+│   │   ├── UpdateConfig.cs         # 更新配置
+│   │   └── UpdateInfo.cs           # 更新信息
+│   └── Services/                   # 核心服务
+│       ├── IToolDataService.cs     # 工具数据服务接口
+│       └── ToolDataService.cs      # 工具数据服务实现
+└── VistaLauncher.Tests/            # 单元测试项目
+    └── ToolDataServiceTests.cs     # ToolDataService 测试 (24 个测试用例)
 ```
 
 ## 重要技术细节
