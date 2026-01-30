@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ContentDialog
+    x:Class="VistaLauncher.Controls.SettingsDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="设置"
+    PrimaryButtonText="关闭"
+    CloseButtonText="取消"
+    DefaultButton="Primary">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="500">
+        <StackPanel Spacing="16" MinWidth="450">
+            <!-- 启动设置 -->
+            <TextBlock Text="启动" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,8"/>
+
+            <!-- 开机自启动开关 -->
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                    <TextBlock Text="开机自启动" FontSize="14"/>
+                    <TextBlock Text="登录 Windows 时自动启动 VistaLauncher"
+                               FontSize="12"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                               TextWrapping="Wrap"/>
+                </StackPanel>
+
+                <ToggleSwitch x:Name="AutoStartToggleSwitch"
+                              Grid.Column="1"
+                              Toggled="AutoStartToggleSwitch_Toggled"
+                              Margin="8,0,0,0"/>
+            </Grid>
+
+            <!-- 不支持时的提示 -->
+            <InfoBar x:Name="NotSupportedInfoBar"
+                     Severity="Informational"
+                     Title="开机自启动"
+                     Message="当前环境不支持开机自启动功能，请安装 MSIX 版本后使用。"
+                     IsOpen="False"/>
+
+            <!-- 状态消息 -->
+            <TextBlock x:Name="StatusTextBlock"
+                       FontSize="12"
+                       Foreground="{ThemeResource SystemFillColorAttentionBrush}"
+                       TextWrapping="Wrap"
+                       Visibility="Collapsed"/>
+        </StackPanel>
+    </ScrollViewer>
+</ContentDialog>
