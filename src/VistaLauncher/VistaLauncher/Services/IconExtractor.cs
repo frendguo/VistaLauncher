@@ -21,6 +21,11 @@ public static class IconExtractor
     private static readonly ConcurrentDictionary<string, BitmapImage?> _cache = new();
 
     /// <summary>
+    /// 信号量，限制并发图标提取数量
+    /// </summary>
+    private static readonly SemaphoreSlim _semaphore = new(4, 4);  // 最多同时处理 4 个图标
+
+    /// <summary>
     /// 最大缓存条目数
     /// </summary>
     private const int MaxCacheSize = 2000;
@@ -45,7 +50,7 @@ public static class IconExtractor
     private static extern bool DestroyIcon(IntPtr hIcon);
 
     /// <summary>
-    /// 从文件路径提取图标
+    /// 从文件路径提取图标（同步版本，不使用缓存）
     /// </summary>
     /// <param name="filePath">可执行文件路径</param>
     /// <param name="useLargeIcon">是否使用大图标</param>
@@ -61,9 +66,9 @@ public static class IconExtractor
         {
             var shfi = new SHFILEINFO();
             var flags = SHGFI_ICON | (useLargeIcon ? SHGFI_LARGEICON : SHGFI_SMALLICON);
-            
+
             var result = SHGetFileInfo(filePath, 0, ref shfi, (uint)Marshal.SizeOf(shfi), flags);
-            
+
             if (result == IntPtr.Zero || shfi.hIcon == IntPtr.Zero)
             {
                 return null;
@@ -73,38 +78,13 @@ public static class IconExtractor
             {
                 using var icon = Icon.FromHandle(shfi.hIcon);
                 using var bitmap = icon.ToBitmap();
-                
-                return ConvertToBitmapImage(bitmap);
+
+                return ConvertToBitmapImageSync(bitmap);
             }
             finally
             {
                 DestroyIcon(shfi.hIcon);
             }
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    /// <summary>
-    /// 将 System.Drawing.Bitmap 转换为 BitmapImage
-    /// </summary>
-    private static BitmapImage? ConvertToBitmapImage(Bitmap bitmap)
-    {
-        try
-        {
-            using var memoryStream = new MemoryStream();
-            bitmap.Save(memoryStream, System.Drawing.Imaging.ImageFormat.Png);
-            memoryStream.Position = 0;
-
-            var bitmapImage = new BitmapImage();
-            
-            // 使用 RandomAccessStream
-            var randomAccessStream = memoryStream.AsRandomAccessStream();
-            bitmapImage.SetSourceAsync(randomAccessStream).AsTask().Wait();
-            
-            return bitmapImage;
         }
         catch
         {
@@ -130,18 +110,85 @@ public static class IconExtractor
             return cached;
         }
 
-        // 从文件系统提取图标
-        var icon = await Task.Run(() => ExtractIcon(filePath, useLargeIcon));
-
-        // 简单的容量控制：达到上限时清空缓存
-        if (_cache.Count >= MaxCacheSize)
+        // 限制并发数量，避免同时加载过多图标
+        await _semaphore.WaitAsync();
+        try
         {
-            _cache.Clear();
-        }
+            // 再次检查缓存（可能在等待时已被其他请求加载）
+            if (_cache.TryGetValue(key, out var cached2))
+            {
+                return cached2;
+            }
 
-        // 添加到缓存
-        _cache.TryAdd(key, icon);
-        return icon;
+            // 从文件系统提取图标（在后台线程执行）
+            var icon = await Task.Run(() => ExtractIcon(filePath, useLargeIcon));
+
+            // 简单的容量控制：达到上限时清空缓存
+            if (_cache.Count >= MaxCacheSize)
+            {
+                _cache.Clear();
+            }
+
+            // 添加到缓存
+            _cache.TryAdd(key, icon);
+            return icon;
+        }
+        finally
+        {
+            _semaphore.Release();
+        }
+    }
+
+    /// <summary>
+    /// 将 System.Drawing.Bitmap 转换为 BitmapImage（同步版本）
+    /// </summary>
+    private static BitmapImage? ConvertToBitmapImageSync(Bitmap bitmap)
+    {
+        try
+        {
+            using var memoryStream = new MemoryStream();
+            bitmap.Save(memoryStream, System.Drawing.Imaging.ImageFormat.Png);
+            memoryStream.Position = 0;
+
+            var bitmapImage = new BitmapImage();
+
+            // 使用 RandomAccessStream
+            // 注意：SetSourceAsync 必须在 UI 线程或具有 CoreDispatcher 的线程上调用
+            // 这里使用 GetAwaiter().GetResult() 替代 .Wait() 以避免 AggregateException 包装
+            var randomAccessStream = memoryStream.AsRandomAccessStream();
+            bitmapImage.SetSourceAsync(randomAccessStream).AsTask().GetAwaiter().GetResult();
+
+            return bitmapImage;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// 将 System.Drawing.Bitmap 转换为 BitmapImage（异步版本）
+    /// </summary>
+    private static async Task<BitmapImage?> ConvertToBitmapImageAsync(Bitmap bitmap)
+    {
+        try
+        {
+            using var memoryStream = new MemoryStream();
+            bitmap.Save(memoryStream, System.Drawing.Imaging.ImageFormat.Png);
+            memoryStream.Position = 0;
+
+            var bitmapImage = new BitmapImage();
+
+            // 使用 RandomAccessStream，异步设置图片源
+            var randomAccessStream = memoryStream.AsRandomAccessStream();
+            await bitmapImage.SetSourceAsync(randomAccessStream);
+
+            return bitmapImage;
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     /// <summary>
