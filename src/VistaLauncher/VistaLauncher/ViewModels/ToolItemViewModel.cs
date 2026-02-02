@@ -99,19 +99,19 @@ public partial class ToolItemViewModel : ObservableObject
     /// 图标图像
     /// </summary>
     [ObservableProperty]
-    private BitmapImage? _iconImage;
+    public partial BitmapImage? IconImage { get; set; }
 
     /// <summary>
     /// 是否正在加载图标
     /// </summary>
     [ObservableProperty]
-    private bool _isLoadingIcon = true;
+    public partial bool IsLoadingIcon { get; set; } = true;
 
     /// <summary>
     /// 是否选中
     /// </summary>
     [ObservableProperty]
-    private bool _isSelected;
+    public partial bool IsSelected { get; set; }
 
     /// <summary>
     /// 搜索匹配分数（用于排序，分数越高排序越靠前）

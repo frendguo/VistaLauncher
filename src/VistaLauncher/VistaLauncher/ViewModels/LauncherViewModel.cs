@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Diagnostics.CodeAnalysis;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.WinUI.Collections;
@@ -61,18 +62,20 @@ public partial class LauncherViewModel : ObservableObject
     /// 搜索查询文本
     /// </summary>
     [ObservableProperty]
-    private string _searchQuery = string.Empty;
+    public partial string SearchQuery { get; set; } = string.Empty;
 
     /// <summary>
     /// 工具列表是否展开
     /// </summary>
     [ObservableProperty]
-    private bool _isExpanded = false;
+    public partial bool IsExpanded { get; set; }
 
     /// <summary>
     /// 过滤后的工具列表视图（使用 AdvancedCollectionView 实现过滤和排序）
     /// </summary>
     private AdvancedCollectionView? _filteredTools;
+
+    [UnconditionalSuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "AdvancedCollectionView sorting is used with known types only")]
     public AdvancedCollectionView FilteredTools => _filteredTools ??= new AdvancedCollectionView(_allToolViewModels);
 
     /// <summary>
@@ -84,13 +87,13 @@ public partial class LauncherViewModel : ObservableObject
     /// 选中的工具
     /// </summary>
     [ObservableProperty]
-    private ToolItemViewModel? _selectedTool;
+    public partial ToolItemViewModel? SelectedTool { get; set; }
 
     /// <summary>
     /// 是否正在加载
     /// </summary>
     [ObservableProperty]
-    private bool _isLoading = false;
+    public partial bool IsLoading { get; set; }
 
     /// <summary>
     /// 列表可见性 (用于 XAML 绑定)
@@ -128,7 +131,7 @@ public partial class LauncherViewModel : ObservableObject
     /// 状态文本
     /// </summary>
     [ObservableProperty]
-    private string _statusText = string.Empty;
+    public partial string StatusText { get; set; } = string.Empty;
 
     /// <summary>
     /// 是否正在下载
