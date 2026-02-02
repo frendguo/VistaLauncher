@@ -106,7 +106,7 @@ internal class IniParser
         var bom = new byte[4];
         using (var file = File.OpenRead(filePath))
         {
-            file.Read(bom, 0, 4);
+            _ = file.Read(bom, 0, 4);
         }
 
         // 检测 BOM

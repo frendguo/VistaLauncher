@@ -14,16 +14,16 @@ public partial class SettingsViewModel : ObservableObject
     private readonly ConfigService _configService;
 
     [ObservableProperty]
-    private bool _autoStartEnabled;
+    public partial bool AutoStartEnabled { get; set; }
 
     [ObservableProperty]
-    private bool _isAutoStartSupported;
+    public partial bool IsAutoStartSupported { get; set; }
 
     [ObservableProperty]
-    private bool _isLoading;
+    public partial bool IsLoading { get; set; }
 
     [ObservableProperty]
-    private string _statusMessage = string.Empty;
+    public partial string StatusMessage { get; set; } = string.Empty;
 
     public SettingsViewModel(IAutoStartService autoStartService, ConfigService configService)
     {
