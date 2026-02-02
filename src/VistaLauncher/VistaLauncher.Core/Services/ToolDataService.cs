@@ -9,13 +9,6 @@ namespace VistaLauncher.Services;
 /// </summary>
 public class ToolDataService : IToolDataService
 {
-    private static readonly JsonSerializerOptions _jsonOptions = new()
-    {
-        WriteIndented = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-    };
-
     private readonly string _userDataDirectory;
     private readonly string _userConfigPath;
     private readonly string _defaultConfigPath;
@@ -265,7 +258,7 @@ public class ToolDataService : IToolDataService
 
         _userData.LastModified = DateTime.Now;
 
-        var json = JsonSerializer.Serialize(_userData, _jsonOptions);
+        var json = JsonSerializer.Serialize(_userData, CoreJsonContext.Default.ToolsData);
         await File.WriteAllTextAsync(_userConfigPath, json);
     }
 
@@ -315,7 +308,7 @@ public class ToolDataService : IToolDataService
         try
         {
             var json = await File.ReadAllTextAsync(filePath);
-            return JsonSerializer.Deserialize<ToolsData>(json, _jsonOptions);
+            return JsonSerializer.Deserialize(json, CoreJsonContext.Default.ToolsData);
         }
         catch (Exception)
         {
