@@ -34,6 +34,9 @@ public sealed partial class MainWindow : WindowEx
     private readonly IImportService _importService;
     private readonly IVersionCheckService _versionCheckService;
     private readonly IUpdateService _updateService;
+    private readonly IPathResolverService _pathResolverService;
+    private readonly IToolAvailabilityService _toolAvailabilityService;
+    private readonly IToolDownloadService _toolDownloadService;
     private readonly IAutoStartService _autoStartService;
     private readonly ConfigService _configService;
 
@@ -117,12 +120,25 @@ public sealed partial class MainWindow : WindowEx
         _versionCheckService = new VersionCheckService();
         _updateService = new UpdateService(_toolDataService);
 
+        // 创建工具下载相关服务
+        _pathResolverService = new PathResolverService();
+        _toolAvailabilityService = new ToolAvailabilityService(_pathResolverService);
+        _toolDownloadService = new ToolDownloadService(
+            _pathResolverService,
+            _toolDataService,
+            _versionCheckService);
+
         // 创建自启动服务和配置服务
         _autoStartService = new AutoStartService();
         _configService = new ConfigService();
 
         // 创建 ViewModel
-        ViewModel = new LauncherViewModel(_toolDataService, searchProvider, processLauncher);
+        ViewModel = new LauncherViewModel(
+            _toolDataService,
+            searchProvider,
+            processLauncher,
+            _toolAvailabilityService,
+            _toolDownloadService);
 
         // 设置窗口属性
         SetupWindow();
