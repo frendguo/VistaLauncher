@@ -32,6 +32,9 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
       - name: Restore dependencies
         run: |
           cd src/VistaLauncher
@@ -48,17 +51,18 @@ jobs:
           cd src/VistaLauncher
           dotnet test VistaLauncher.Tests/VistaLauncher.Tests.csproj -p:Platform=${{ matrix.platform }} -c Release --no-build
 
-      - name: Publish MSIX
+      - name: Build MSIX Package
         run: |
           cd src/VistaLauncher
-          dotnet publish VistaLauncher/VistaLauncher.csproj -c Release -p:Platform=${{ matrix.platform }} -p:PublishProfile=win-${{ matrix.platform }}
+          msbuild VistaLauncher/VistaLauncher.csproj /p:Configuration=Release /p:Platform=${{ matrix.platform }} /p:GenerateAppxPackageOnBuild=true /p:AppxPackageDir=AppPackages/ /p:AppxBundle=Never /p:UapAppxPackageBuildMode=SideloadOnly /p:AppxPackageSigningEnabled=false
 
       - name: Upload MSIX Artifact
         uses: actions/upload-artifact@v4
         with:
           name: VistaLauncher-${{ matrix.platform }}
-          path: src/VistaLauncher/VistaLauncher/bin/${{ matrix.platform }}/Release/net9.0-windows10.0.26100.0/win-${{ matrix.platform }}/VistaLauncher.msix
+          path: src/VistaLauncher/VistaLauncher/AppPackages/**/*.msix
           retention-days: 30
+          if-no-files-found: warn
 
   release:
     needs: build
@@ -78,7 +82,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            artifacts/VistaLauncher-*/VistaLauncher.msix
+            artifacts/VistaLauncher-*/**/*.msix
           draft: false
           prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') || contains(github.ref, 'rc') }}
           generate_release_notes: true
