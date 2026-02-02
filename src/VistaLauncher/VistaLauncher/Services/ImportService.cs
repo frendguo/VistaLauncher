@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using VistaLauncher.Core.Services;
 using VistaLauncher.Models;
 
 namespace VistaLauncher.Services;
@@ -151,6 +153,9 @@ public class ImportService : IImportService
                 // 判断架构
                 var architecture = DetermineArchitecture(exe64);
 
+                // 提取版本号
+                var version = FileVersionHelper.ExtractVersionFromExe(executablePath);
+
                 // 创建工具项
                 var tool = new ToolItem
                 {
@@ -165,6 +170,7 @@ public class ImportService : IImportService
                     GroupId = groupId,
                     Type = toolType,
                     Architecture = architecture,
+                    Version = version,
                     CreatedAt = DateTime.Now,
                     UpdatedAt = DateTime.Now
                 };
@@ -334,4 +340,5 @@ public class ImportService : IImportService
             CurrentItem = currentItem
         });
     }
+
 }

@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Diagnostics.CodeAnalysis;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.WinUI.Collections;
@@ -15,9 +16,12 @@ public partial class LauncherViewModel : ObservableObject
     private readonly IToolDataService _toolDataService;
     private readonly ISearchProvider _searchProvider;
     private readonly IProcessLauncher _processLauncher;
+    private readonly IToolAvailabilityService? _availabilityService;
+    private readonly IToolDownloadService? _downloadService;
 
     private List<ToolItem> _allTools = [];
     private CancellationTokenSource? _searchCts;
+    private CancellationTokenSource? _downloadCts;
 
     /// <summary>
     /// 所有工具的 ViewModel 集合（底层数据源）
@@ -43,29 +47,35 @@ public partial class LauncherViewModel : ObservableObject
     public LauncherViewModel(
         IToolDataService toolDataService,
         ISearchProvider searchProvider,
-        IProcessLauncher processLauncher)
+        IProcessLauncher processLauncher,
+        IToolAvailabilityService? availabilityService = null,
+        IToolDownloadService? downloadService = null)
     {
         _toolDataService = toolDataService;
         _searchProvider = searchProvider;
         _processLauncher = processLauncher;
+        _availabilityService = availabilityService;
+        _downloadService = downloadService;
     }
 
     /// <summary>
     /// 搜索查询文本
     /// </summary>
     [ObservableProperty]
-    private string _searchQuery = string.Empty;
+    public partial string SearchQuery { get; set; } = string.Empty;
 
     /// <summary>
     /// 工具列表是否展开
     /// </summary>
     [ObservableProperty]
-    private bool _isExpanded = false;
+    public partial bool IsExpanded { get; set; }
 
     /// <summary>
     /// 过滤后的工具列表视图（使用 AdvancedCollectionView 实现过滤和排序）
     /// </summary>
     private AdvancedCollectionView? _filteredTools;
+
+    [UnconditionalSuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "AdvancedCollectionView sorting is used with known types only")]
     public AdvancedCollectionView FilteredTools => _filteredTools ??= new AdvancedCollectionView(_allToolViewModels);
 
     /// <summary>
@@ -77,13 +87,13 @@ public partial class LauncherViewModel : ObservableObject
     /// 选中的工具
     /// </summary>
     [ObservableProperty]
-    private ToolItemViewModel? _selectedTool;
+    public partial ToolItemViewModel? SelectedTool { get; set; }
 
     /// <summary>
     /// 是否正在加载
     /// </summary>
     [ObservableProperty]
-    private bool _isLoading = false;
+    public partial bool IsLoading { get; set; }
 
     /// <summary>
     /// 列表可见性 (用于 XAML 绑定)
@@ -121,7 +131,25 @@ public partial class LauncherViewModel : ObservableObject
     /// 状态文本
     /// </summary>
     [ObservableProperty]
-    private string _statusText = string.Empty;
+    public partial string StatusText { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 是否正在下载
+    /// </summary>
+    [ObservableProperty]
+    public partial bool IsDownloading { get; set; }
+
+    /// <summary>
+    /// 下载进度百分比
+    /// </summary>
+    [ObservableProperty]
+    public partial double DownloadProgress { get; set; }
+
+    /// <summary>
+    /// 下载状态文本
+    /// </summary>
+    [ObservableProperty]
+    public partial string DownloadStatus { get; set; }
 
     /// <summary>
     /// 当 IsExpanded 变化时通知 ListVisibility 也变化
@@ -170,10 +198,38 @@ public partial class LauncherViewModel : ObservableObject
             _currentLowerQuery = string.Empty;
             _currentQueryTokens = [];
             UpdateScoresAndRefresh();
+
+            // 检查工具可用性
+            await CheckToolAvailabilitiesAsync();
         }
         finally
         {
             IsLoading = false;
+        }
+    }
+
+    /// <summary>
+    /// 检查所有工具的可用性状态
+    /// </summary>
+    private async Task CheckToolAvailabilitiesAsync()
+    {
+        if (_availabilityService == null)
+            return;
+
+        try
+        {
+            var availabilities = await _availabilityService.CheckAvailabilitiesAsync(_allTools);
+            foreach (var (toolId, availability) in availabilities)
+            {
+                if (_vmCache.TryGetValue(toolId, out var vm))
+                {
+                    vm.UpdateAvailability(availability);
+                }
+            }
+        }
+        catch
+        {
+            // 可用性检查失败不影响主流程
         }
     }
 
@@ -202,7 +258,7 @@ public partial class LauncherViewModel : ObservableObject
         // 设置过滤器（分数 > 0 的才显示）
         if (isEmptyQuery)
         {
-            FilteredTools.Filter = null; // 空查询显示所有
+            FilteredTools.Filter = null!; // 空查询显示所有
         }
         else
         {
@@ -418,11 +474,106 @@ public partial class LauncherViewModel : ObservableObject
     /// </summary>
     public async Task LaunchToolAsync(ToolItem tool, bool runAsAdmin = false)
     {
+        // 如果工具未安装，先下载
+        if (_availabilityService != null &&
+            _downloadService != null &&
+            !_availabilityService.IsToolInstalled(tool))
+        {
+            await DownloadAndLaunchAsync(tool);
+            return;
+        }
+
         await _processLauncher.LaunchAsync(tool);
-        
+
         // 启动后重置状态
         SearchQuery = string.Empty;
         IsExpanded = false;
+    }
+
+    /// <summary>
+    /// 下载并启动工具
+    /// </summary>
+    public async Task DownloadAndLaunchAsync(ToolItem tool)
+    {
+        if (_downloadService == null || _availabilityService == null)
+            return;
+
+        // 检查是否支持下载
+        if (!_downloadService.CanDownload(tool))
+        {
+            StatusText = $"工具 {tool.Name} 不支持自动下载";
+            return;
+        }
+
+        // 取消之前的下载
+        _downloadCts?.Cancel();
+        _downloadCts = new CancellationTokenSource();
+
+        IsDownloading = true;
+        DownloadProgress = 0;
+        DownloadStatus = "准备下载...";
+
+        try
+        {
+            // 创建进度报告
+            var progress = new Progress<DownloadProgress>(p =>
+            {
+                DownloadProgress = p.Percentage;
+                DownloadStatus = p.Status;
+            });
+
+            // 下载并安装
+            var result = await _downloadService.DownloadAndInstallAsync(
+                tool,
+                progress,
+                _downloadCts.Token);
+
+            if (result.Success)
+            {
+                StatusText = $"已安装 {result.ToolName} v{result.Version}";
+
+                // 更新工具的可用性状态
+                if (_vmCache.TryGetValue(tool.Id, out var vm))
+                {
+                    vm.UpdateAvailability(ToolAvailability.Available);
+                    await vm.RefreshIconAsync();
+                }
+
+                // 启动工具
+                await _processLauncher.LaunchAsync(tool);
+
+                // 重置状态
+                SearchQuery = string.Empty;
+                IsExpanded = false;
+            }
+            else
+            {
+                StatusText = $"下载失败: {result.ErrorMessage}";
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            StatusText = "下载已取消";
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"下载失败: {ex.Message}";
+        }
+        finally
+        {
+            IsDownloading = false;
+            DownloadProgress = 0;
+        }
+    }
+
+    /// <summary>
+    /// 取消下载
+    /// </summary>
+    [RelayCommand]
+    private void CancelDownload()
+    {
+        _downloadCts?.Cancel();
+        StatusText = "下载已取消";
     }
 
     /// <summary>

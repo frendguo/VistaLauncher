@@ -12,6 +12,7 @@ public partial class ToolItemViewModel : ObservableObject
 {
     private readonly ToolItem _toolItem;
     private Task? _iconLoadTask;
+    private ToolAvailability _availability = ToolAvailability.Available;
 
     public ToolItemViewModel(ToolItem toolItem, int index = 0, bool deferIconLoading = true)
     {
@@ -103,13 +104,13 @@ public partial class ToolItemViewModel : ObservableObject
     /// 图标图像
     /// </summary>
     [ObservableProperty]
-    private BitmapImage? _iconImage;
+    public partial BitmapImage? IconImage { get; set; }
 
     /// <summary>
     /// 是否正在加载图标
     /// </summary>
     [ObservableProperty]
-    private bool _isLoadingIcon = false;
+    public partial bool IsLoadingIcon { get; set; }
 
     /// <summary>
     /// 图标是否已加载（包括已尝试加载但失败的情况）
@@ -125,7 +126,7 @@ public partial class ToolItemViewModel : ObservableObject
     /// 是否选中
     /// </summary>
     [ObservableProperty]
-    private bool _isSelected;
+    public partial bool IsSelected { get; set; }
 
     /// <summary>
     /// 搜索匹配分数（用于排序，分数越高排序越靠前）
@@ -192,4 +193,62 @@ public partial class ToolItemViewModel : ObservableObject
         _iconLoadTask = null;
         await LoadIconAsync();
     }
+
+    /// <summary>
+    /// 工具可用性状态
+    /// </summary>
+    public ToolAvailability Availability
+    {
+        get => _availability;
+        private set
+        {
+            if (_availability != value)
+            {
+                _availability = value;
+                OnPropertyChanged(nameof(Availability));
+                OnPropertyChanged(nameof(IsNotInstalled));
+                OnPropertyChanged(nameof(HasUpdate));
+                OnPropertyChanged(nameof(StatusIcon));
+                OnPropertyChanged(nameof(StatusTooltip));
+            }
+        }
+    }
+
+    /// <summary>
+    /// 更新工具可用性状态
+    /// </summary>
+    public void UpdateAvailability(ToolAvailability availability)
+    {
+        Availability = availability;
+    }
+
+    /// <summary>
+    /// 是否未安装
+    /// </summary>
+    public bool IsNotInstalled => Availability == ToolAvailability.NotInstalled;
+
+    /// <summary>
+    /// 是否有可用更新
+    /// </summary>
+    public bool HasUpdate => Availability == ToolAvailability.UpdateAvailable;
+
+    /// <summary>
+    /// 状态图标字符
+    /// </summary>
+    public string StatusIcon => Availability switch
+    {
+        ToolAvailability.NotInstalled => "\uE896", // Download icon
+        ToolAvailability.UpdateAvailable => "\uE8AB", // Sync/Update icon
+        _ => string.Empty
+    };
+
+    /// <summary>
+    /// 状态提示文本
+    /// </summary>
+    public string StatusTooltip => Availability switch
+    {
+        ToolAvailability.NotInstalled => "未安装，按 Enter 下载",
+        ToolAvailability.UpdateAvailable => "有可用更新",
+        _ => string.Empty
+    };
 }

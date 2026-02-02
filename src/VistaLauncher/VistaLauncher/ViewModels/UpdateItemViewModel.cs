@@ -15,79 +15,79 @@ public sealed partial class UpdateItemViewModel : ObservableObject
     /// 工具 ID
     /// </summary>
     [ObservableProperty]
-    private string _id = string.Empty;
+    public partial string Id { get; set; } = string.Empty;
 
     /// <summary>
     /// 工具名称
     /// </summary>
     [ObservableProperty]
-    private string _name = string.Empty;
+    public partial string Name { get; set; } = string.Empty;
 
     /// <summary>
     /// 当前版本
     /// </summary>
     [ObservableProperty]
-    private string _currentVersion = string.Empty;
+    public partial string CurrentVersion { get; set; } = string.Empty;
 
     /// <summary>
     /// 最新版本
     /// </summary>
     [ObservableProperty]
-    private string _latestVersion = string.Empty;
+    public partial string LatestVersion { get; set; } = string.Empty;
 
     /// <summary>
     /// 发布说明
     /// </summary>
     [ObservableProperty]
-    private string? _releaseNotes;
+    public partial string? ReleaseNotes { get; set; }
 
     /// <summary>
     /// 发布日期
     /// </summary>
     [ObservableProperty]
-    private DateTime? _releaseDate;
+    public partial DateTime? ReleaseDate { get; set; }
 
     /// <summary>
     /// 文件大小（字节）
     /// </summary>
     [ObservableProperty]
-    private long? _fileSize;
+    public partial long? FileSize { get; set; }
 
     /// <summary>
     /// 下载链接
     /// </summary>
     [ObservableProperty]
-    private string? _downloadUrl;
+    public partial string? DownloadUrl { get; set; }
 
     /// <summary>
     /// 是否选中
     /// </summary>
     [ObservableProperty]
-    private bool _isSelected = true;
+    public partial bool IsSelected { get; set; } = true;
 
     /// <summary>
     /// 是否正在更新
     /// </summary>
     [ObservableProperty]
-    private bool _isUpdating;
+    public partial bool IsUpdating { get; set; }
 
     /// <summary>
     /// 更新进度（0-100）
     /// </summary>
     [ObservableProperty]
-    private double _updateProgress;
+    public partial double UpdateProgress { get; set; }
 
     /// <summary>
     /// 更新状态文本
     /// </summary>
     [ObservableProperty]
-    private string _updateStatus = string.Empty;
+    public partial string UpdateStatus { get; set; } = string.Empty;
 
     /// <summary>
     /// 是否更新成功
     /// </summary>
     [ObservableProperty]
-    private bool? _updateSuccess;
+    public partial bool? UpdateSuccess { get; set; }
 
     /// <summary>
     /// 关联的工具项
