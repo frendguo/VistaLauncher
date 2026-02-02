@@ -1,0 +1,90 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+      - develop
+
+env:
+  DOTNET_VERSION: '9.0.x'
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    strategy:
+      matrix:
+        platform: ['x64', 'x86', 'ARM64']
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Restore dependencies
+        run: |
+          cd src/VistaLauncher
+          dotnet restore VistaLauncher.slnx -p:Platform=${{ matrix.platform }} -p:PublishReadyToRun=true
+
+      - name: Build
+        run: |
+          cd src/VistaLauncher
+          dotnet build VistaLauncher.slnx -p:Platform=${{ matrix.platform }} -c Release --no-restore
+
+      - name: Run Tests
+        if: matrix.platform != 'ARM64'
+        run: |
+          cd src/VistaLauncher
+          dotnet test VistaLauncher.Tests/VistaLauncher.Tests.csproj -p:Platform=${{ matrix.platform }} -c Release --no-build
+
+      - name: Build MSIX Package
+        run: |
+          cd src/VistaLauncher
+          msbuild VistaLauncher/VistaLauncher.csproj /p:Configuration=Release /p:Platform=${{ matrix.platform }} /p:GenerateAppxPackageOnBuild=true /p:AppxPackageDir=AppPackages/ /p:AppxBundle=Never /p:UapAppxPackageBuildMode=SideloadOnly /p:AppxPackageSigningEnabled=false
+
+      - name: Upload MSIX Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: VistaLauncher-${{ matrix.platform }}
+          path: src/VistaLauncher/VistaLauncher/AppPackages/**/*.msix
+          retention-days: 30
+          if-no-files-found: warn
+
+  release:
+    needs: build
+    runs-on: windows-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/VistaLauncher-*/**/*.msix
+          draft: false
+          prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') || contains(github.ref, 'rc') }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

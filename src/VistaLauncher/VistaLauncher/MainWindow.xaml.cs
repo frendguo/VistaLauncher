@@ -8,6 +8,7 @@ using Microsoft.UI.Xaml.Input;
 using VistaLauncher.Controls;
 using VistaLauncher.Services;
 using VistaLauncher.ViewModels;
+using VistaLauncher.Models;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Graphics;
 using Windows.System;
@@ -33,6 +34,8 @@ public sealed partial class MainWindow : WindowEx
     private readonly IImportService _importService;
     private readonly IVersionCheckService _versionCheckService;
     private readonly IUpdateService _updateService;
+    private readonly IAutoStartService _autoStartService;
+    private readonly ConfigService _configService;
 
     // Win32 API 常量
     private const int GWL_STYLE = -16;
@@ -114,6 +117,10 @@ public sealed partial class MainWindow : WindowEx
         _versionCheckService = new VersionCheckService();
         _updateService = new UpdateService(_toolDataService);
 
+        // 创建自启动服务和配置服务
+        _autoStartService = new AutoStartService();
+        _configService = new ConfigService();
+
         // 创建 ViewModel
         ViewModel = new LauncherViewModel(_toolDataService, searchProvider, processLauncher);
 
@@ -145,9 +152,9 @@ public sealed partial class MainWindow : WindowEx
             HideWindow();
         };
 
-        CommandBar.SettingsClick += (s, e) =>
+        CommandBar.SettingsClick += async (s, e) =>
         {
-            // TODO: 打开设置窗口
+            await OpenSettingsAsync();
         };
 
         // 连接 CommandBar 更多菜单事件
@@ -640,6 +647,27 @@ public sealed partial class MainWindow : WindowEx
 
             // 刷新列表
             await ViewModel.RefreshAsync();
+        }
+        finally
+        {
+            // 恢复自动隐藏
+            SuppressAutoHide(false);
+        }
+    }
+
+    private async Task OpenSettingsAsync()
+    {
+        // 打开对话框前禁用自动隐藏
+        SuppressAutoHide(true);
+
+        try
+        {
+            var dialog = new SettingsDialog(_autoStartService, _configService)
+            {
+                XamlRoot = Content.XamlRoot
+            };
+
+            await dialog.ShowAsync();
         }
         finally
         {
