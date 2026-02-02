@@ -137,19 +137,19 @@ public partial class LauncherViewModel : ObservableObject
     /// 是否正在下载
     /// </summary>
     [ObservableProperty]
-    private bool _isDownloading = false;
+    public partial bool IsDownloading { get; set; }
 
     /// <summary>
     /// 下载进度百分比
     /// </summary>
     [ObservableProperty]
-    private double _downloadProgress = 0;
+    public partial double DownloadProgress { get; set; }
 
     /// <summary>
     /// 下载状态文本
     /// </summary>
     [ObservableProperty]
-    private string _downloadStatus = string.Empty;
+    public partial string DownloadStatus { get; set; }
 
     /// <summary>
     /// 当 IsExpanded 变化时通知 ListVisibility 也变化
