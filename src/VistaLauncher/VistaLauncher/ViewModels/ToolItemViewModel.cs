@@ -11,15 +11,20 @@ namespace VistaLauncher.ViewModels;
 public partial class ToolItemViewModel : ObservableObject
 {
     private readonly ToolItem _toolItem;
+    private Task? _iconLoadTask;
     private ToolAvailability _availability = ToolAvailability.Available;
 
-    public ToolItemViewModel(ToolItem toolItem, int index = 0)
+    public ToolItemViewModel(ToolItem toolItem, int index = 0, bool deferIconLoading = true)
     {
         _toolItem = toolItem;
         _index = index;
 
-        // 异步加载图标
-        _ = LoadIconAsync();
+        // 延迟加载图标：只在需要时加载
+        if (!deferIconLoading)
+        {
+            // 立即加载（用于测试或特殊场景）
+            _ = LoadIconAsync();
+        }
     }
 
     /// <summary>
@@ -105,7 +110,17 @@ public partial class ToolItemViewModel : ObservableObject
     /// 是否正在加载图标
     /// </summary>
     [ObservableProperty]
-    public partial bool IsLoadingIcon { get; set; } = true;
+    public partial bool IsLoadingIcon { get; set; }
+
+    /// <summary>
+    /// 图标是否已加载（包括已尝试加载但失败的情况）
+    /// </summary>
+    private bool _isIconLoaded = false;
+
+    /// <summary>
+    /// 图标是否已加载
+    /// </summary>
+    public bool IsIconLoaded => _isIconLoaded;
 
     /// <summary>
     /// 是否选中
@@ -132,10 +147,26 @@ public partial class ToolItemViewModel : ObservableObject
     }
 
     /// <summary>
+    /// 请求加载图标（延迟加载入口）
+    /// 当项目进入可见区域时调用
+    /// </summary>
+    public void RequestLoadIcon()
+    {
+        if (_isIconLoaded || _iconLoadTask != null)
+        {
+            return;
+        }
+
+        _iconLoadTask = LoadIconAsync();
+    }
+
+    /// <summary>
     /// 异步加载图标
     /// </summary>
     private async Task LoadIconAsync()
     {
+        if (_isIconLoaded) return;
+
         IsLoadingIcon = true;
         try
         {
@@ -149,6 +180,7 @@ public partial class ToolItemViewModel : ObservableObject
         finally
         {
             IsLoadingIcon = false;
+            _isIconLoaded = true;
         }
     }
 
@@ -157,6 +189,8 @@ public partial class ToolItemViewModel : ObservableObject
     /// </summary>
     public async Task RefreshIconAsync()
     {
+        _isIconLoaded = false;
+        _iconLoadTask = null;
         await LoadIconAsync();
     }
 
